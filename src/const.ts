@@ -12,36 +12,8 @@ export const GITHUB_AUTH_URL = 'https://github.com/login/oauth/authorize';
 
 export const CURRENT_YEAR = new Date().getFullYear();
 
-export const PODCAST_LINKS = [
-	{
-		href: 'https://feed.syntax.fm',
-		text: 'RSS'
-	},
-	{
-		href: 'https://open.spotify.com/show/4kYCRYJ3yK5DQbP5tbfZby?si=bOe7-kl6RnOHapMsVnFWgw',
-		text: 'Spotify'
-	},
-	{
-		href: 'https://itunes.apple.com/ca/podcast/syntax-tasty-web-development-treats/id1253186678?mt=2',
-		text: 'Apple Podcasts'
-	},
-	{
-		href: 'https://www.youtube.com/@syntaxfm',
-		text: 'YouTube'
-	},
-	{
-		href: 'https://overcast.fm/itunes1253186678/syntax-tasty-web-development-treats',
-		text: 'Overcast'
-	},
-	{
-		href: 'https://pca.st/fmx9',
-		text: 'PocketCasts'
-	},
-	{
-		href: 'https://music.amazon.com/podcasts/3f16a46b-6281-4fc7-99de-380fbeb6d970/syntax---tasty-web-development-treats',
-		text: 'Amazon Music'
-	}
-];
+// Podcast links removed - nihao.ml is not a podcast
+export const PODCAST_LINKS: { href: string; text: string }[] = [];
 
 // AI & Transcripts
 export const PER_PAGE = 10;

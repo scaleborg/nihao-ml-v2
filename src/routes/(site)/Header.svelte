@@ -14,7 +14,7 @@
 	<div class="header-container content">
 		<div class="logo">
 			{#if $page.url.pathname !== '/'}
-				<a title="Syntax Podcast Home" href="/">
+				<a title="nihao.ml Home" href="/">
 					<Logo />
 				</a>
 			{/if}

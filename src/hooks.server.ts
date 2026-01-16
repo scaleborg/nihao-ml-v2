@@ -29,7 +29,7 @@ console.log(`🤓 Cache Status... ${cache_status}`);
 // RUNS ONCE ON FILE LOAD
 
 Sentry.init({
-	release: `syntax@${__VER__}`,
+	release: `nihao@${__VER__}`,
 	dsn: 'https://ea134756b8f244ff99638864ce038567@o4505358925561856.ingest.sentry.io/4505358945419264',
 	tracesSampleRate: 1,
 	profilesSampleRate: 1.0, // Profiling sample rate is relative to tracesSampleRate
@@ -51,7 +51,7 @@ Sentry.init({
 
 export const auth: Handle = async function ({ event, resolve }) {
 	const access_token = event.cookies.get('access_token');
-	event.locals.theme = decodeURIComponent(event.cookies.get('theme') || 'system');
+	event.locals.theme = decodeURIComponent(event.cookies.get('theme') || 'dark');
 	// Get current user from session via access token
 	if (access_token) {
 		const user = await find_user_by_access_token(access_token);

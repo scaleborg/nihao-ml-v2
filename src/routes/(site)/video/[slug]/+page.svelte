@@ -694,29 +694,37 @@
 	}
 
 	.content {
-		display: grid;
-		grid-template-columns: 1fr;
+		display: flex;
+		flex-direction: column;
 		gap: 1.5rem;
-	}
-
-	@media (min-width: 900px) {
-		.content {
-			grid-template-columns: 1fr 400px;
-		}
+		max-width: 800px;
+		margin: 0 auto;
 	}
 
 	.player-section {
 		position: sticky;
-		top: 1rem;
+		top: 0;
+		z-index: 10;
+		background: #000;
+		padding: 1rem;
+		margin: 0 -1rem;
+		border-radius: 0 0 12px 12px;
 	}
 
 	.player-wrapper {
 		position: relative;
-		padding-bottom: 56.25%; /* 16:9 aspect ratio */
-		height: 0;
+		width: 100%;
+		max-width: 640px;
+		margin: 0 auto;
 		overflow: hidden;
-		border-radius: 12px;
-		background: var(--bg-1);
+		border-radius: 8px;
+		background: #000;
+	}
+
+	.player-wrapper::before {
+		content: '';
+		display: block;
+		padding-top: 56.25%;
 	}
 
 	.player-wrapper :global(iframe) {
@@ -728,11 +736,10 @@
 	}
 
 	.transcript-section {
-		background: var(--bg-1);
+		background: #f8f8f8;
 		border-radius: 12px;
 		padding: 1rem;
-		max-height: calc(100vh - 200px);
-		overflow-y: auto;
+		color: #1a1a1a;
 	}
 
 	.transcript-header {
@@ -742,7 +749,7 @@
 		margin-bottom: 1rem;
 		position: sticky;
 		top: 0;
-		background: var(--bg-1);
+		background: #f8f8f8;
 		padding: 0.5rem 0;
 		z-index: 1;
 	}
@@ -762,9 +769,9 @@
 		width: 24px;
 		height: 24px;
 		border-radius: 50%;
-		border: 1px solid var(--bg-2);
-		background: var(--bg-0);
-		color: var(--fg-2);
+		border: 1px solid #ccc;
+		background: #fff;
+		color: #666;
 		font-size: 0.875rem;
 		font-weight: 600;
 		cursor: pointer;
@@ -794,11 +801,11 @@
 	.speed-btn {
 		padding: 0.25rem 0.5rem;
 		font-size: 0.75rem;
-		border: 1px solid var(--bg-2);
-		background: var(--bg-0);
+		border: 1px solid #ccc;
+		background: #fff;
 		border-radius: 4px;
 		cursor: pointer;
-		color: var(--fg-2);
+		color: #555;
 		transition: all 0.15s;
 	}
 
@@ -820,11 +827,11 @@
 	.mode-btn {
 		padding: 0.25rem 0.625rem;
 		font-size: 0.75rem;
-		border: 1px solid var(--bg-2);
-		background: var(--bg-0);
+		border: 1px solid #ccc;
+		background: #fff;
 		border-radius: 4px;
 		cursor: pointer;
-		color: var(--fg-2);
+		color: #555;
 		transition: all 0.15s;
 	}
 
@@ -833,7 +840,7 @@
 	}
 
 	.mode-btn.active {
-		background: color-mix(in srgb, var(--primary) 20%, var(--bg-0));
+		background: color-mix(in srgb, var(--primary) 20%, #fff);
 		border-color: var(--primary);
 		color: var(--primary);
 	}
@@ -844,7 +851,7 @@
 		gap: 0.5rem;
 		font-size: 0.875rem;
 		cursor: pointer;
-		color: var(--fg-2);
+		color: #555;
 	}
 
 	.pinyin-toggle input {
@@ -953,7 +960,7 @@
 		gap: 1rem;
 		padding: 0.75rem;
 		padding-left: calc(0.75rem + 4px);
-		background: var(--bg-0);
+		background: #fff;
 		border: 2px solid transparent;
 		border-left: 4px solid transparent;
 		border-radius: 8px;
@@ -964,15 +971,15 @@
 	}
 
 	.line:hover {
-		border-color: var(--bg-2);
-		border-left-color: var(--bg-2);
+		border-color: #ddd;
+		border-left-color: #ddd;
 	}
 
 	.line.active {
 		border-color: var(--primary);
 		border-left-color: var(--primary);
-		background: color-mix(in srgb, var(--primary) 12%, var(--bg-0));
-		box-shadow: 0 0 20px color-mix(in srgb, var(--primary) 25%, transparent);
+		background: color-mix(in srgb, var(--primary) 10%, #fff);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 	}
 
 	/* Progress bar within active line */
@@ -991,7 +998,7 @@
 	.time {
 		flex-shrink: 0;
 		font-size: 0.75rem;
-		color: var(--fg-2);
+		color: #888;
 		font-variant-numeric: tabular-nums;
 		padding-top: 0.25rem;
 	}
@@ -1004,39 +1011,42 @@
 
 	.pinyin {
 		font-size: 0.875rem;
-		color: var(--fg-2);
+		color: #666;
 	}
 
 	.chinese {
-		font-size: 1.125rem;
-		line-height: 1.5;
+		font-size: 1.5rem;
+		line-height: 1.6;
 	}
 
 	.clickable-char {
-		background: none;
+		background: #e8e8e8;
 		border: none;
-		padding: 0 1px;
-		margin: 0;
+		padding: 2px 4px;
+		margin: 1px;
 		font: inherit;
-		color: inherit;
+		color: #1a1a1a;
 		cursor: pointer;
-		border-radius: 2px;
+		border-radius: 4px;
 		transition: background-color 0.15s;
 	}
 
 	/* Character familiarity colors */
 	.clickable-char.char-new {
-		background: color-mix(in srgb, #3b82f6 30%, transparent);
+		background: #d0d8e8;
 	}
 
 	.clickable-char.char-learning {
-		background: color-mix(in srgb, var(--yellow-3, #fbbf24) 40%, transparent);
+		background: #f0e6c8;
 	}
 
-	/* Known characters have no background (white/default) */
+	/* Known characters - very subtle */
+	.clickable-char.char-known {
+		background: #f0f0f0;
+	}
 
 	.clickable-char:hover {
-		background: color-mix(in srgb, var(--primary) 40%, transparent);
+		background: #d0d0d0;
 	}
 
 	.no-transcript {

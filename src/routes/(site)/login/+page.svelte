@@ -17,7 +17,7 @@
 				<button class="button" type="submit">Logout</button>
 			</form>
 		{:else}
-			<p>If you are not on the Syntax team, this login will do nothing for you.</p>
+			<p>If you are not on the nihao.ml team, this login will do nothing for you.</p>
 			<a
 				class="button subtle"
 				onclick={() => loading.setLoading(true)}

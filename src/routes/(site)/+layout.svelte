@@ -13,8 +13,8 @@
 	import Meta from '$lib/meta/Meta.svelte';
 	import AdminMenu from '$lib/AdminMenu.svelte';
 	import ThemeMaker from '../../params/ThemeMaker.svelte';
-	import { page } from '$app/stores';
 	import PageLoadingIndicator from '$lib/page_loading_indicator.svelte';
+	import { page } from '$app/stores';
 
 	let { data, children } = $props();
 	let { user, user_theme } = $derived(data);
