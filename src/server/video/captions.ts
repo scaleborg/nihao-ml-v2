@@ -1,10 +1,10 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { readFile, unlink } from 'fs/promises';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 interface Caption {
 	start: string;
@@ -93,9 +93,22 @@ export async function fetchChineseCaptions(videoId: string): Promise<Caption[]> 
 	for (const lang of languages) {
 		try {
 			// Use yt-dlp to download auto-generated subtitles
-			const cmd = `yt-dlp --write-auto-sub --sub-lang "${lang}" --sub-format vtt --skip-download -o "${outputPath}" "${videoUrl}" 2>&1`;
-
-			await execAsync(cmd, { timeout: 30000 });
+			// Using execFile with args array to prevent command injection
+			await execFileAsync(
+				'yt-dlp',
+				[
+					'--write-auto-sub',
+					'--sub-lang',
+					lang,
+					'--sub-format',
+					'vtt',
+					'--skip-download',
+					'-o',
+					outputPath,
+					videoUrl
+				],
+				{ timeout: 30000 }
+			);
 
 			// Check for downloaded subtitle file
 			const subtitlePath = `${outputPath}.${lang}.vtt`;

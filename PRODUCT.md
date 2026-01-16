@@ -1,4 +1,4 @@
-# nihao.ml — Specification
+# nihao.ml — Product Vision & Specification
 
 A Chinese learning platform built on real content. Watch videos, learn characters, track progress.
 
@@ -126,6 +126,9 @@ model UserCharacter {
   characterId String
   character   Character @relation(fields: [characterId], references: [id])
 
+  // Familiarity (manual rating, separate from FSRS)
+  familiarity Int      @default(1) // 1-4 = learning levels, 5 = known
+
   // FSRS state
   stability   Float    @default(0)
   difficulty  Float    @default(0)
@@ -236,16 +239,18 @@ model StudySession {
 
 ### Phase 1: Core Study Experience
 
-| Feature               | Description                                             |
-| --------------------- | ------------------------------------------------------- |
-| **Auth**              | OAuth login (GitHub, Google)                            |
-| **Video Import**      | Paste YouTube URL → extract captions → generate pinyin  |
-| **Study Player**      | YouTube embed with synced transcript                    |
-| **Click-to-seek**     | Click any line → video jumps to timestamp               |
-| **Pinyin Toggle**     | Show/hide pinyin under Chinese text                     |
-| **Follow Along**      | Auto-scroll transcript with playback                    |
-| **Character Panel**   | Click character → see definition, radical, stroke order |
-| **Progress Tracking** | Track characters seen, time studied                     |
+| Feature               | Description                                                   |
+| --------------------- | ------------------------------------------------------------- |
+| **Auth**              | OAuth login (GitHub, Google)                                  |
+| **Video Import**      | Paste YouTube URL → extract captions → generate pinyin        |
+| **Study Player**      | YouTube embed with synced transcript                          |
+| **Click-to-seek**     | Click any line → video jumps to timestamp                     |
+| **Pinyin Toggle**     | Show/hide pinyin under Chinese text                           |
+| **Follow Along**      | Auto-scroll transcript with playback                          |
+| **Word Familiarity**  | Color-code transcript: blue=new, yellow=learning, white=known |
+| **Character Sidebar** | Click character → sidebar with definition, HSK, save button   |
+| **Per-Video Stats**   | Show new/learning/known word counts for each video            |
+| **Progress Tracking** | Track characters seen, time studied                           |
 
 ### Phase 2: Spaced Repetition
 

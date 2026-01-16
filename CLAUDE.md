@@ -2,12 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Overview
+
+**nihao.ml** — A Chinese learning platform built on real content. Watch videos, learn characters, track progress.
+
+- **Product spec**: [PRODUCT.md](./PRODUCT.md) — Vision, data model, features (Phases 1-5)
+- **Progress**: [docs/progress.md](./docs/progress.md) — Current implementation status (Sprints)
+
 ## Development Commands
 
 ### Core Commands
 
-- `pnpm dev` - Start development server with preheat script
-- `pnpm build` - Build production application (runs svelte build + file copying)
+- `pnpm dev` - Start development server
+- `pnpm build` - Build production application
 - `pnpm check` - Run TypeScript type checking
 - `pnpm lint` - Run prettier + eslint + stylelint
 - `pnpm test` - Run Playwright tests
@@ -21,200 +28,195 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm db:seed` - Seed database with test data
 - `pnpm i-changed-the-schema` - Shortcut for push + generate after schema changes
 
-### Testing Commands
+## Technology Stack
 
-- `pnpm test:ui` - Run Playwright tests with UI
-- `pnpm check:watch` - Run TypeScript check in watch mode
+| Layer      | Technology                       |
+| ---------- | -------------------------------- |
+| Framework  | SvelteKit 2.x + Svelte 5         |
+| Language   | TypeScript (strict)              |
+| Database   | MySQL + Prisma ORM (PlanetScale) |
+| Cache      | Redis (Upstash)                  |
+| Styling    | PostCSS + CSS custom properties  |
+| Deployment | Vercel (Node.js 22.x)            |
+| Monitoring | Sentry                           |
 
-## Project Architecture
-
-### Technology Stack
-
-- **Frontend**: SvelteKit with Svelte 5, TypeScript
-- **Backend**: Node.js with SvelteKit server-side rendering
-- **Database**: MySQL with Prisma ORM (PlanetScale)
-- **Caching**: Redis (Upstash)
-- **Deployment**: Vercel with Node.js 22.x runtime
-- **Monitoring**: Sentry for error tracking
-
-### Key Directory Structure
+## Key Directory Structure
 
 ```
 src/
 ├── routes/
-│   ├── (site)/        # Main website layout
-│   ├── (blank)/       # Clean layout for embeds
-│   └── api/           # API endpoints
-├── lib/               # Reusable components
-├── server/            # Server-side logic and utilities
-├── state/             # Svelte stores for client state
-├── styles/            # CSS architecture with themes
-├── actions/           # Svelte actions
-└── utilities/         # Shared utilities
+│   ├── (site)/           # Main website layout
+│   │   └── video/[slug]/ # Video study page
+│   ├── (blank)/          # Clean layout for embeds
+│   └── api/              # API endpoints
+│       └── character/    # Character lookup API
+├── lib/
+│   └── chinese/          # Chinese-specific components
+│       └── CharacterPopup.svelte
+├── server/               # Server-side logic
+│   └── prisma-client.ts
+├── state/                # Svelte stores
+├── styles/               # CSS with themes
+├── actions/              # Svelte actions (click_outside, etc.)
+└── utilities/            # Shared utilities
 ```
 
-### Database Schema
+## Database Schema
 
-The application manages podcast content with these key models:
+Core models for Chinese learning:
 
-- **Show**: Episodes with metadata, transcripts, AI-generated content
-- **User**: GitHub OAuth authentication with role-based access
-- **Guest**: Guest profiles with social links and appearances
-- **Transcript**: Full transcription with utterances and speaker identification
-- **Video**: YouTube integration with playlists
-- **UserSubmission**: User-generated content submissions
+| Model              | Purpose                                                        |
+| ------------------ | -------------------------------------------------------------- |
+| **Video**          | YouTube videos with metadata                                   |
+| **Transcript**     | Synced transcript with lines                                   |
+| **TranscriptLine** | Individual lines with timestamps, text, pinyin                 |
+| **Character**      | Chinese characters with pinyin, definition, HSK level, radical |
+| **UserCharacter**  | User's learning state per character (FSRS SRS)                 |
+| **UserVocabulary** | Saved words/phrases                                            |
+| **User**           | OAuth authentication                                           |
 
-### Content Management
-
-- Show notes are stored as markdown files in the `/shows/` directory
-- AI-generated content (summaries, tweets, show notes) using OpenAI/Anthropic
-- Automated transcription via Deepgram
-- Multi-layer caching with Redis for performance
+See full schema in [PRODUCT.md](./PRODUCT.md#data-model).
 
 ## Code Style and Conventions
 
 ### Naming Conventions
 
-- **Components**: PascalCase for `.svelte` files (e.g., `ShowCard.svelte`)
+- **Components**: PascalCase for `.svelte` files (e.g., `CharacterPopup.svelte`)
 - **Variables/Functions**: snake_case for variables, functions, and props
 - **Constants**: UPPER_CASE for true constants only
 - **Types**: PascalCase for TypeScript interfaces
 
 ### Svelte 5 Patterns
 
-- Use `$state` for reactive state declarations
-- Use `$derived` for computed values
-- Use `$effect` for side effects and lifecycle
-- Use `$props` for component props with destructuring
-- Use `$bindable` for two-way bindable props
-- Use classes for complex state management (state machines)
+```typescript
+// Reactive state
+let show_pinyin = $state(true);
+let current_line_index = $state(-1);
+
+// Derived values
+let { video } = $derived(data);
+
+// Props
+let { character, data, onclose }: Props = $props();
+
+// Complex state with classes
+class PlayerState {
+	currentVideo = $state<Video | null>(null);
+	isPlaying = $state(false);
+}
+```
 
 ### CSS Architecture
 
-- CSS variables defined in `src/styles/variables.css`
-- Use `bg` and `fg` convention for background/foreground colors
-- Custom media queries for responsive design:
+- CSS variables in `src/styles/variables.css`
+- Use `bg` and `fg` convention for colors
+- Custom media queries:
   ```css
   @custom-media --below-med (width < 700px);
   @custom-media --above-med (width > 700px);
   ```
 
-### File Organization
+## Key Features (Implemented)
 
-- **Components**: Group related components in `/src/lib/`
-- **Routes**: Use SvelteKit's file-based routing with layout groups
-- **State**: Svelte stores in `/src/state/` for global state
-- **Server**: All server-side logic in `/src/server/`
+### Video Study Page (`/video/[slug]`)
 
-## Key Features
+- YouTube IFrame API with 100ms polling for sync
+- Transcript synced with video playback
+- Click line to seek
+- Auto-scroll to active line
+- Pinyin toggle
+- Line progress indicator
 
-### Audio Player
+### Playback Controls (Sprint 1)
 
-- Advanced web audio player with offline support
-- Media Session API integration
-- Position saving and resume functionality
-- Service worker for offline playback
+| Key       | Action                  |
+| --------- | ----------------------- |
+| `Space`   | Play/pause              |
+| `A` / `S` | Previous/next line      |
+| `R`       | Repeat current line     |
+| `←` / `→` | Seek ±5s                |
+| `[` / `]` | Speed down/up (0.5x-2x) |
+| `L`       | Toggle loop mode        |
+| `P`       | Toggle auto-pause       |
+| `?`       | Show help               |
+| `Escape`  | Close popup/dialog      |
 
-### Search System
+### Character Popup (Sprint 3)
 
-- Client-side search using FlexSearch
-- Web workers for non-blocking search
-- Fuzzy search across shows, guests, and transcripts
+- Click any Chinese character → popup appears
+- Shows: pinyin, definition, HSK level, radical, stroke count
+- Client-side caching (no repeat API calls)
+- API: `GET /api/character/[char]`
 
-### Admin Dashboard
+## Common Patterns
 
-- Role-based access control
-- Content management for shows and guests
-- AI content generation tools
-- Transcript management
+### Character Lookup
 
-### Performance Optimization
+```typescript
+// API endpoint: src/routes/api/character/[char]/+server.ts
+const character = await prisma_client.character.findUnique({
+	where: { id: char },
+	select: {
+		id: true,
+		pinyin: true,
+		definition: true,
+		hsk_level: true,
+		radical: true,
+		stroke_count: true
+	}
+});
+```
 
-- Redis caching for database queries
-- IndexedDB for offline data storage
-- Aggressive caching strategies
-- Service worker for offline functionality
+### Chinese Text Handling
+
+```typescript
+// Detect Chinese characters
+const CHINESE_CHAR_REGEX = /[\u4e00-\u9fff]/;
+
+// Split text into clickable/non-clickable chars
+function splitChineseText(text: string) {
+	return [...text].map((char) => ({
+		char,
+		isClickable: CHINESE_CHAR_REGEX.test(char)
+	}));
+}
+```
+
+### Component with Popup
+
+```svelte
+<script lang="ts">
+	import { clickOutside } from '$actions/click_outside';
+
+	let { character, onclose }: Props = $props();
+</script>
+
+<div use:clickOutside onclick-outside={onclose}>
+	<!-- popup content -->
+</div>
+```
 
 ## Development Workflow
 
 ### Adding New Features
 
-1. Create components in `/src/lib/` for reusable UI
-2. Add routes in `/src/routes/` following the layout structure
-3. Use Prisma for database operations via `/src/server/prisma-client.ts`
-4. Implement caching for database queries using the cache utilities
-5. Add proper TypeScript types and error handling
+1. Check [PRODUCT.md](./PRODUCT.md) for the feature spec
+2. Update [docs/progress.md](./docs/progress.md) with the sprint
+3. Create components in `/src/lib/`
+4. Add routes in `/src/routes/`
+5. Run `pnpm check` before committing
 
 ### Database Changes
 
 1. Modify `/prisma/schema.prisma`
-2. Run `pnpm i-changed-the-schema` to apply changes
-3. Update seed data if needed in `/prisma/seed.ts`
+2. Run `pnpm i-changed-the-schema`
+3. Update seed data if needed
 
-### Testing
+## Skills (Slash Commands)
 
-- Use Playwright for integration tests
-- Use Vitest for unit tests
-- Run linting before commits
-- Test across different screen sizes and devices
-
-### Deployment
-
-- Application deploys to Vercel automatically
-- Environment variables managed through Vercel dashboard
-- Database hosted on PlanetScale
-- Redis cache on Upstash
-
-## Common Patterns
-
-### State Management
-
-```typescript
-// For complex state, use classes
-class PlayerState {
-	currentShow = $state<Show | null>(null);
-	isPlaying = $state(false);
-
-	play() {
-		this.isPlaying = true;
-	}
-}
-
-export const playerState = new PlayerState();
-```
-
-### Database Queries
-
-```typescript
-// Use the cached prisma client
-import { prisma } from '$server/prisma-client';
-
-// Cache database queries
-const shows = await prisma.show.findMany({
-	where: { show_type: 'TASTY' },
-	orderBy: { number: 'desc' }
-});
-```
-
-### Component Structure
-
-```svelte
-<script lang="ts">
-	import { playerState } from '$state/player.svelte';
-
-	let { show } = $props<{ show: Show }>();
-	let isPlaying = $derived(playerState.currentShow?.id === show.id);
-</script>
-
-<div class="show-card">
-	<h3>{show.title}</h3>
-	<button onclick={() => playerState.play(show)}>
-		{isPlaying ? 'Pause' : 'Play'}
-	</button>
-</div>
-```
-
-Remember to follow the existing code conventions and patterns when adding new features or modifying existing code.
+| Command           | Purpose                                                    |
+| ----------------- | ---------------------------------------------------------- |
+| `/security-check` | Red-team pen-test: scan for vulnerabilities, suggest fixes |
 
 ## Planning Mode Policy
 

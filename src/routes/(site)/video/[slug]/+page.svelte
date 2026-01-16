@@ -2,9 +2,19 @@
 	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
 	import type { PageData } from './$types';
+	import CharacterPopup from '$lib/chinese/CharacterPopup.svelte';
 
 	interface Props {
 		data: PageData;
+	}
+
+	interface CharacterData {
+		id: string;
+		pinyin: string;
+		definition: string;
+		hsk_level: number | null;
+		radical: string | null;
+		stroke_count: number | null;
 	}
 
 	let { data }: Props = $props();
@@ -15,6 +25,7 @@
 	let current_line_index = $state(-1);
 	let player_ready = $state(false);
 	let is_playing = $state(false);
+	let line_progress = $state(0); // 0-100 percentage within current line
 
 	// Phase 1: Enhanced playback controls
 	let playback_speed = $state(1);
@@ -23,7 +34,17 @@
 	let show_help = $state(false);
 	let has_paused_for_line = $state(false); // Track if we've already paused for the current line
 
+	// Phase 3: Character popup state
+	let popup_visible = $state(false);
+	let popup_character = $state<string | null>(null);
+	let popup_data = $state<CharacterData | null>(null);
+	let popup_loading = $state(false);
+	let popup_error = $state<string | null>(null);
+	let popup_position = $state({ x: 0, y: 0 });
+	let character_cache = new Map<string, CharacterData | null>();
+
 	const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+	const CHINESE_CHAR_REGEX = /[\u4e00-\u9fff]/;
 
 	// YouTube Player API
 	let player: YT.Player | null = null;
@@ -116,6 +137,16 @@
 			}
 		}
 
+		// Calculate line progress for the current line
+		if (newIndex >= 0) {
+			const line = lines[newIndex];
+			const duration = line.end_time - line.start_time;
+			const elapsed = currentTime - line.start_time;
+			line_progress = Math.min(100, Math.max(0, (elapsed / duration) * 100));
+		} else {
+			line_progress = 0;
+		}
+
 		// Check if we're at the end of the current line for loop/auto-pause
 		if (current_line_index >= 0 && current_line_index < lines.length) {
 			const currentLine = lines[current_line_index];
@@ -124,6 +155,7 @@
 			// Loop mode: replay current line when it ends
 			if (loop_mode && currentTime >= currentLine.end_time - lineEndBuffer) {
 				player?.seekTo(currentLine.start_time, true);
+				line_progress = 0; // Reset progress when looping
 				return; // Don't update line index
 			}
 
@@ -234,6 +266,61 @@
 		has_paused_for_line = false;
 	}
 
+	// Phase 3: Character popup functions
+	function splitChineseText(text: string) {
+		return [...text].map((char) => ({
+			char,
+			isClickable: CHINESE_CHAR_REGEX.test(char)
+		}));
+	}
+
+	function closePopup() {
+		popup_visible = false;
+		popup_character = null;
+		popup_data = null;
+		popup_loading = false;
+		popup_error = null;
+	}
+
+	async function handleCharacterClick(event: MouseEvent | KeyboardEvent, char: string) {
+		event.stopPropagation();
+
+		const target = event.target as HTMLElement;
+		const rect = target.getBoundingClientRect();
+		popup_position = { x: rect.left + rect.width / 2, y: rect.bottom + 8 };
+		popup_character = char;
+		popup_visible = true;
+
+		// Check cache
+		if (character_cache.has(char)) {
+			popup_data = character_cache.get(char) ?? null;
+			popup_loading = false;
+			return;
+		}
+
+		// Fetch from API
+		popup_loading = true;
+		popup_data = null;
+		popup_error = null;
+
+		try {
+			const res = await fetch(`/api/character/${encodeURIComponent(char)}`);
+			if (res.ok) {
+				popup_data = await res.json();
+				character_cache.set(char, popup_data);
+			} else if (res.status === 404) {
+				popup_data = null;
+				character_cache.set(char, null);
+			} else {
+				popup_error = 'Failed to load';
+			}
+		} catch {
+			popup_error = 'Network error';
+		} finally {
+			popup_loading = false;
+		}
+	}
+
 	function handleKeydown(event: KeyboardEvent) {
 		// Ignore if user is typing in an input
 		if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
@@ -286,7 +373,10 @@
 				show_help = !show_help;
 				break;
 			case 'escape':
-				if (show_help) {
+				if (popup_visible) {
+					event.preventDefault();
+					closePopup();
+				} else if (show_help) {
 					event.preventDefault();
 					show_help = false;
 				}
@@ -419,6 +509,7 @@
 						<button
 							class="line"
 							class:active={current_line_index === i}
+							style={current_line_index === i ? `--progress: ${line_progress}%` : ''}
 							onclick={() => seekToLine(i)}
 						>
 							<span class="time">{formatTime(line.start_time)}</span>
@@ -426,7 +517,21 @@
 								{#if show_pinyin && line.pinyin}
 									<span class="pinyin">{line.pinyin}</span>
 								{/if}
-								<span class="chinese">{line.text}</span>
+								<span class="chinese">
+									{#each splitChineseText(line.text) as { char, isClickable }}
+										{#if isClickable}
+											<span
+												class="clickable-char"
+												role="button"
+												tabindex="-1"
+												onclick={(e) => handleCharacterClick(e, char)}
+												onkeydown={(e) => e.key === 'Enter' && handleCharacterClick(e, char)}
+											>
+												{char}
+											</span>
+										{:else}{char}{/if}
+									{/each}
+								</span>
 							</div>
 						</button>
 					{/each}
@@ -437,6 +542,17 @@
 		</div>
 	</div>
 </div>
+
+{#if popup_visible && popup_character}
+	<CharacterPopup
+		character={popup_character}
+		data={popup_data}
+		loading={popup_loading}
+		error={popup_error}
+		position={popup_position}
+		onclose={closePopup}
+	/>
+{/if}
 
 <style>
 	.video-page {
@@ -726,27 +842,44 @@
 	}
 
 	.line {
+		position: relative;
 		display: flex;
 		gap: 1rem;
 		padding: 0.75rem;
+		padding-left: calc(0.75rem + 4px);
 		background: var(--bg-0);
 		border: 2px solid transparent;
+		border-left: 4px solid transparent;
 		border-radius: 8px;
 		cursor: pointer;
 		text-align: left;
 		width: 100%;
-		transition:
-			border-color 0.2s,
-			background-color 0.2s;
+		transition: all 0.2s ease;
 	}
 
 	.line:hover {
 		border-color: var(--bg-2);
+		border-left-color: var(--bg-2);
 	}
 
 	.line.active {
 		border-color: var(--primary);
-		background: color-mix(in srgb, var(--primary) 10%, var(--bg-0));
+		border-left-color: var(--primary);
+		background: color-mix(in srgb, var(--primary) 12%, var(--bg-0));
+		box-shadow: 0 0 20px color-mix(in srgb, var(--primary) 25%, transparent);
+	}
+
+	/* Progress bar within active line */
+	.line.active::after {
+		content: '';
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		height: 3px;
+		width: var(--progress, 0%);
+		background: linear-gradient(90deg, var(--primary), var(--accent, var(--primary)));
+		border-radius: 0 2px 2px 0;
+		transition: width 100ms linear;
 	}
 
 	.time {
@@ -771,6 +904,22 @@
 	.chinese {
 		font-size: 1.125rem;
 		line-height: 1.5;
+	}
+
+	.clickable-char {
+		background: none;
+		border: none;
+		padding: 0;
+		margin: 0;
+		font: inherit;
+		color: inherit;
+		cursor: pointer;
+		border-radius: 2px;
+		transition: background-color 0.15s;
+	}
+
+	.clickable-char:hover {
+		background: color-mix(in srgb, var(--primary) 30%, transparent);
 	}
 
 	.no-transcript {
