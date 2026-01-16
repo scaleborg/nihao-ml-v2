@@ -215,3 +215,17 @@ const shows = await prisma.show.findMany({
 ```
 
 Remember to follow the existing code conventions and patterns when adding new features or modifying existing code.
+
+## Planning Mode Policy
+
+Always enter planning mode before implementing features that:
+
+- Touch more than 2 files
+- Have multiple valid approaches
+- Add new functionality (not just bug fixes or small tweaks)
+
+Skip planning mode for:
+
+- Single-file fixes with obvious solutions
+- Very specific user instructions
+- Simple refactors or deletions
