@@ -222,8 +222,11 @@
 		</div>
 		<footer role="contentinfo">
 			<p>
-				<!-- If you came into the source to look at what vibes is, it's this code -->
-				Search powered by vibes.
+				Search powered by <a
+					href="https://github.com/nextapps-de/flexsearch"
+					target="_blank"
+					rel="noopener">flexsearch</a
+				>.
 			</p>
 		</footer>
 	</section>
@@ -318,6 +321,9 @@
 			padding: 5px 5px;
 			margin: 0;
 			display: inline-block;
+		}
+		a {
+			color: inherit;
 		}
 		@media (--below-med) {
 			display: none;
