@@ -26,7 +26,6 @@
 		<div class="cta-buttons">
 			{#if user}
 				<a href="/admin/import" class="button primary">Import Video</a>
-				<a href="/dashboard" class="button secondary">Dashboard</a>
 			{:else}
 				<a href="/login" class="button primary">Get Started</a>
 				<a href="/about" class="button secondary">Learn More</a>

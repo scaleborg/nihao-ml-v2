@@ -19,11 +19,8 @@
 		>
 			<button class="button-reset close-button" onclick={toggle}>×</button>
 			<nav>
-				<a onclick={toggle} href="/shows">Shows</a>
-				<a onclick={toggle} href="/videos">Video</a>
-				<a onclick={toggle} href="/snackpack">Newsletter</a>
+				<a onclick={toggle} href="/videos">Videos</a>
 				<a onclick={toggle} href="/about">About</a>
-				<a onclick={toggle} href="/potluck">Potluck Qs</a>
 				<a onclick={toggle} target="_blank" href="https://sentry.shop">Swag</a>
 			</nav>
 		</div>

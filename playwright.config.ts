@@ -2,11 +2,14 @@ import type { PlaywrightTestConfig } from '@playwright/test';
 
 const config: PlaywrightTestConfig = {
 	webServer: {
-		command: 'pnpm build:svelte && pnpm preview',
-		port: 4173,
-		timeout: 600000
+		command: 'pnpm vite-dev',
+		port: 5173,
+		timeout: 30000,
+		reuseExistingServer: true
 	},
-	testDir: 'tests'
+	testDir: 'tests',
+	timeout: 10000,
+	expect: { timeout: 5000 }
 };
 
 export default config;

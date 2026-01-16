@@ -1,15 +1,85 @@
 <script lang="ts">
+	import { page } from '$app/stores';
+	import Pagination from '$lib/Pagination.svelte';
+	import SelectMenu from '$lib/SelectMenu.svelte';
+	import { queryParameters } from 'sveltekit-search-params';
+
 	let { data } = $props();
+
+	const store = queryParameters<{
+		level?: string;
+		perPage?: string;
+		order?: string;
+		page: string;
+	}>();
+
+	let isNoindexPage = $derived(
+		['order', 'level', 'sort', 'perPage'].some((filter) => $page.url.searchParams.has(filter))
+	);
 </script>
 
 <svelte:head>
 	<title>All Videos | nihao.ml</title>
+	{#if isNoindexPage}
+		<meta name="robots" content="noindex" />
+	{/if}
 </svelte:head>
 
 <section class="videos-page">
-	<div class="header">
-		<h1>All Videos</h1>
+	<div class="list-heading">
+		<h1 class="h3">All Videos</h1>
+		<div style="display:flex; gap: 10px;">
+			<SelectMenu
+				popover_id="filter-level"
+				onselect={(e) => {
+					$store.level = e.detail;
+				}}
+				button_text="Level"
+				button_icon="filter"
+				value={$store.level || ''}
+				options={[
+					{ value: '', label: 'All' },
+					{ value: 'hsk1', label: 'HSK 1' },
+					{ value: 'hsk2', label: 'HSK 2' },
+					{ value: 'hsk3', label: 'HSK 3' },
+					{ value: 'hsk4', label: 'HSK 4+' }
+				]}
+			/>
+			<SelectMenu
+				popover_id="filter-perPage"
+				onselect={(e) => {
+					$store.perPage = e.detail;
+				}}
+				value_as_label
+				button_text="Per Page"
+				value={$store.perPage?.toString() || '10'}
+				options={[
+					{ value: '10', label: '10' },
+					{ value: '20', label: '20' },
+					{ value: '40', label: '40' }
+				]}
+			/>
+			<SelectMenu
+				popover_id="filter-order"
+				onselect={(e) => {
+					$store.order = e.detail;
+				}}
+				value={$store.order || 'desc'}
+				button_text="Sort"
+				button_icon="sort"
+				options={[
+					{ value: 'desc', label: 'Newest To Oldest' },
+					{ value: 'asc', label: 'Oldest To Newest' }
+				]}
+			/>
+		</div>
 	</div>
+
+	<Pagination
+		page={parseInt($store.page || '1')}
+		count={data.videos?.length || 50}
+		perPage={parseInt($store.perPage || '10')}
+	/>
 
 	<div class="video-grid">
 		{#each data.videos as video}
@@ -31,29 +101,30 @@
 			</a>
 		{/each}
 	</div>
+
+	<Pagination
+		page={parseInt($store.page || '1')}
+		count={data.videos?.length || 50}
+		perPage={parseInt($store.perPage || '10')}
+	/>
 </section>
 
-<style>
+<style lang="postcss">
 	.videos-page {
-		padding: 2rem 0;
+		display: grid;
+		gap: 20px;
+		margin-bottom: 20px;
 	}
 
-	.header {
-		margin-bottom: 2rem;
-	}
-
-	.header h1 {
+	.list-heading {
 		display: flex;
-		align-items: center;
-		gap: 1rem;
-	}
-
-	.header h1::before,
-	.header h1::after {
-		content: '';
-		flex: 1;
-		height: 1px;
-		background: var(--fg-2, rgba(255, 255, 255, 0.3));
+		justify-content: space-between;
+		align-items: baseline;
+		flex-direction: column;
+		margin-bottom: 2rem;
+		@media (--above_med) {
+			flex-direction: row;
+		}
 	}
 
 	.video-grid {
