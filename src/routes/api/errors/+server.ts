@@ -11,6 +11,12 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		envelope = await request.text();
 		const piece = envelope.split('\n')[0];
+
+		// Validate envelope has content before parsing
+		if (!piece || piece.trim() === '') {
+			return Response.json({ error: 'Empty envelope' }, { status: 400 });
+		}
+
 		const header = JSON.parse(piece);
 		const dsn = new URL(header['dsn']);
 		const project_id = dsn.pathname?.replace('/', '');

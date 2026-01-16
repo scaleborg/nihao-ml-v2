@@ -102,10 +102,6 @@
 		margin: 0 auto;
 	}
 
-	.highlight {
-		color: var(--primary, #fabf46);
-	}
-
 	.subtitle {
 		font-size: 1.125rem;
 		color: var(--fg-2, rgba(255, 255, 255, 0.7));
