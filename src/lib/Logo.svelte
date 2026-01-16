@@ -24,7 +24,7 @@
 		font-family: var(--heading-font-family);
 		font-weight: 900;
 		font-size: 2rem;
-		line-height: 0.85;
+		line-height: 0.95;
 		color: var(--logo-color, var(--primary, #fabf46));
 	}
 </style>
