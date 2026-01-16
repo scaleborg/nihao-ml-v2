@@ -16,6 +16,12 @@
 	let isNoindexPage = $derived(
 		['order', 'level', 'sort', 'perPage'].some((filter) => $page.url.searchParams.has(filter))
 	);
+
+	// Pagination logic
+	let currentPage = $derived(parseInt($store.page || '1'));
+	let perPage = $derived(parseInt($store.perPage || '9'));
+	let startIndex = $derived((currentPage - 1) * perPage);
+	let paginatedVideos = $derived(data.videos?.slice(startIndex, startIndex + perPage) || []);
 </script>
 
 <svelte:head>
@@ -49,14 +55,15 @@
 				popover_id="filter-perPage"
 				onselect={(e) => {
 					$store.perPage = e.detail;
+					$store.page = '1';
 				}}
 				value_as_label
 				button_text="Per Page"
-				value={$store.perPage?.toString() || '10'}
+				value={$store.perPage?.toString() || '9'}
 				options={[
-					{ value: '10', label: '10' },
-					{ value: '20', label: '20' },
-					{ value: '40', label: '40' }
+					{ value: '9', label: '9' },
+					{ value: '18', label: '18' },
+					{ value: '36', label: '36' }
 				]}
 			/>
 			<SelectMenu
@@ -75,14 +82,10 @@
 		</div>
 	</div>
 
-	<Pagination
-		page={parseInt($store.page || '1')}
-		count={data.videos?.length || 50}
-		perPage={parseInt($store.perPage || '10')}
-	/>
+	<Pagination page={currentPage} count={data.videos?.length || 50} {perPage} />
 
 	<div class="video-grid">
-		{#each data.videos as video}
+		{#each paginatedVideos as video}
 			<a href="/video/{video.slug}" class="video-card">
 				{#if video.thumbnail}
 					<img src={video.thumbnail} alt={video.title} class="thumbnail" />
@@ -102,11 +105,7 @@
 		{/each}
 	</div>
 
-	<Pagination
-		page={parseInt($store.page || '1')}
-		count={data.videos?.length || 50}
-		perPage={parseInt($store.perPage || '10')}
-	/>
+	<Pagination page={currentPage} count={data.videos?.length || 50} {perPage} />
 </section>
 
 <style lang="postcss">
