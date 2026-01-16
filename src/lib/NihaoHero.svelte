@@ -21,9 +21,7 @@
 				<span class="logo-text">nihao<span class="dot">.ml</span></span>
 			</a>
 		</div>
-		<h2 class="tagline">
-			Learn Chinese from <span class="highlight">Real Content</span>
-		</h2>
+		<h2 class="text-center">Learn Chinese from Real Content</h2>
 		<p class="subtitle">Watch videos, study characters, track your progress</p>
 		<div class="cta-buttons">
 			{#if user}
@@ -81,12 +79,12 @@
 
 	.logo-text {
 		font-family: var(--font-family-heading, system-ui);
-		font-size: clamp(4rem, 15vw, 10rem);
+		font-size: clamp(3rem, 10vw, 5rem);
 		font-weight: 900;
-		font-style: italic;
 		color: var(--primary, #fabf46);
 		display: block;
 		line-height: 1;
+		text-align: center;
 		mask-image: url('$assets/Grit Mask@2x.png');
 		mask-repeat: repeat;
 		mask-size: 250px;
@@ -99,11 +97,10 @@
 		color: var(--primary, #fabf46);
 	}
 
-	.tagline {
-		font-size: clamp(1.25rem, 4vw, 2rem);
-		text-align: center;
-		margin: 0;
-		color: var(--fg-1, white);
+	h2 {
+		text-wrap: balance;
+		max-width: 850px;
+		margin: 0 auto;
 	}
 
 	.highlight {
