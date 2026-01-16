@@ -10,10 +10,20 @@
 	let { data }: Props = $props();
 	let { video } = $derived(data);
 
+	// Basic playback state
 	let show_pinyin = $state(true);
 	let current_line_index = $state(-1);
 	let player_ready = $state(false);
 	let is_playing = $state(false);
+
+	// Phase 1: Enhanced playback controls
+	let playback_speed = $state(1);
+	let loop_mode = $state(false);
+	let auto_pause_mode = $state(false);
+	let show_help = $state(false);
+	let has_paused_for_line = $state(false); // Track if we've already paused for the current line
+
+	const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 	// YouTube Player API
 	let player: YT.Player | null = null;
@@ -106,8 +116,32 @@
 			}
 		}
 
+		// Check if we're at the end of the current line for loop/auto-pause
+		if (current_line_index >= 0 && current_line_index < lines.length) {
+			const currentLine = lines[current_line_index];
+			const lineEndBuffer = 0.15; // Small buffer to catch the end
+
+			// Loop mode: replay current line when it ends
+			if (loop_mode && currentTime >= currentLine.end_time - lineEndBuffer) {
+				player?.seekTo(currentLine.start_time, true);
+				return; // Don't update line index
+			}
+
+			// Auto-pause mode: pause at end of each line
+			if (
+				auto_pause_mode &&
+				!has_paused_for_line &&
+				currentTime >= currentLine.end_time - lineEndBuffer
+			) {
+				player?.pauseVideo();
+				has_paused_for_line = true;
+				return;
+			}
+		}
+
 		if (newIndex !== current_line_index) {
 			current_line_index = newIndex;
+			has_paused_for_line = false; // Reset for new line
 			scrollToCurrentLine();
 		}
 	}
@@ -136,12 +170,187 @@
 		const secs = Math.floor(seconds % 60);
 		return `${mins}:${secs.toString().padStart(2, '0')}`;
 	}
+
+	// Phase 1: Playback control functions
+	function togglePlayPause() {
+		if (!player || !player_ready) return;
+		if (is_playing) {
+			player.pauseVideo();
+		} else {
+			player.playVideo();
+		}
+	}
+
+	function goToPreviousLine() {
+		if (current_line_index > 0) {
+			seekToLine(current_line_index - 1);
+		} else if (current_line_index === 0) {
+			// Replay current line if at the beginning
+			seekToLine(0);
+		}
+	}
+
+	function goToNextLine() {
+		if (!video.transcript?.lines) return;
+		if (current_line_index < video.transcript.lines.length - 1) {
+			seekToLine(current_line_index + 1);
+		}
+	}
+
+	function repeatCurrentLine() {
+		if (current_line_index >= 0) {
+			seekToLine(current_line_index);
+		}
+	}
+
+	function seekRelative(seconds: number) {
+		if (!player || !player_ready) return;
+		const currentTime = player.getCurrentTime();
+		player.seekTo(Math.max(0, currentTime + seconds), true);
+	}
+
+	function setSpeed(speed: number) {
+		if (!player || !player_ready) return;
+		playback_speed = speed;
+		// @ts-expect-error - setPlaybackRate is a valid YouTube API method but not in types
+		player.setPlaybackRate(speed);
+	}
+
+	function adjustSpeed(delta: number) {
+		const currentIndex = SPEED_OPTIONS.indexOf(playback_speed);
+		let newIndex = currentIndex + delta;
+		if (newIndex < 0) newIndex = 0;
+		if (newIndex >= SPEED_OPTIONS.length) newIndex = SPEED_OPTIONS.length - 1;
+		setSpeed(SPEED_OPTIONS[newIndex]);
+	}
+
+	function toggleLoopMode() {
+		loop_mode = !loop_mode;
+		// If turning on loop mode, turn off auto-pause (mutually exclusive behavior makes more sense)
+	}
+
+	function toggleAutoPause() {
+		auto_pause_mode = !auto_pause_mode;
+		has_paused_for_line = false;
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		// Ignore if user is typing in an input
+		if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+			return;
+		}
+
+		switch (event.key.toLowerCase()) {
+			case ' ':
+				event.preventDefault();
+				togglePlayPause();
+				break;
+			case 'a':
+				event.preventDefault();
+				goToPreviousLine();
+				break;
+			case 's':
+				event.preventDefault();
+				goToNextLine();
+				break;
+			case 'r':
+				event.preventDefault();
+				repeatCurrentLine();
+				break;
+			case 'arrowleft':
+				event.preventDefault();
+				seekRelative(-5);
+				break;
+			case 'arrowright':
+				event.preventDefault();
+				seekRelative(5);
+				break;
+			case '[':
+				event.preventDefault();
+				adjustSpeed(-1);
+				break;
+			case ']':
+				event.preventDefault();
+				adjustSpeed(1);
+				break;
+			case 'l':
+				event.preventDefault();
+				toggleLoopMode();
+				break;
+			case 'p':
+				event.preventDefault();
+				toggleAutoPause();
+				break;
+			case '?':
+				event.preventDefault();
+				show_help = !show_help;
+				break;
+			case 'escape':
+				if (show_help) {
+					event.preventDefault();
+					show_help = false;
+				}
+				break;
+		}
+	}
 </script>
 
 <svelte:head>
 	<title>{video.title} | Nihao.ml</title>
 	<meta name="description" content="Learn Chinese with: {video.title}" />
 </svelte:head>
+
+<svelte:window onkeydown={handleKeydown} />
+
+{#if show_help}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="help-overlay"
+		onclick={() => (show_help = false)}
+		onkeydown={(e) => e.key === 'Escape' && (show_help = false)}
+		role="dialog"
+		aria-modal="true"
+		aria-label="Keyboard shortcuts"
+		tabindex="-1"
+	>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="help-dialog"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+		>
+			<div class="help-header">
+				<h3>Keyboard Shortcuts</h3>
+				<button class="close-btn" onclick={() => (show_help = false)} aria-label="Close">×</button>
+			</div>
+			<div class="help-content">
+				<div class="shortcut-group">
+					<h4>Playback</h4>
+					<div class="shortcut"><kbd>Space</kbd><span>Play / Pause</span></div>
+					<div class="shortcut"><kbd>←</kbd><span>Seek back 5s</span></div>
+					<div class="shortcut"><kbd>→</kbd><span>Seek forward 5s</span></div>
+				</div>
+				<div class="shortcut-group">
+					<h4>Navigation</h4>
+					<div class="shortcut"><kbd>A</kbd><span>Previous line</span></div>
+					<div class="shortcut"><kbd>S</kbd><span>Next line</span></div>
+					<div class="shortcut"><kbd>R</kbd><span>Repeat current line</span></div>
+				</div>
+				<div class="shortcut-group">
+					<h4>Speed</h4>
+					<div class="shortcut"><kbd>[</kbd><span>Decrease speed</span></div>
+					<div class="shortcut"><kbd>]</kbd><span>Increase speed</span></div>
+				</div>
+				<div class="shortcut-group">
+					<h4>Modes</h4>
+					<div class="shortcut"><kbd>L</kbd><span>Toggle loop mode</span></div>
+					<div class="shortcut"><kbd>P</kbd><span>Toggle auto-pause</span></div>
+					<div class="shortcut"><kbd>?</kbd><span>Show/hide help</span></div>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <div class="video-page">
 	<header>
@@ -161,7 +370,43 @@
 
 		<div class="transcript-section" bind:this={transcript_container}>
 			<div class="transcript-header">
-				<h2>Transcript</h2>
+				<div class="header-row">
+					<h2>Transcript</h2>
+					<button class="help-btn" onclick={() => (show_help = true)} title="Keyboard shortcuts (?)"
+						>?</button
+					>
+				</div>
+				<div class="controls-row">
+					<div class="speed-controls">
+						{#each SPEED_OPTIONS as speed}
+							<button
+								class="speed-btn"
+								class:active={playback_speed === speed}
+								onclick={() => setSpeed(speed)}
+							>
+								{speed}x
+							</button>
+						{/each}
+					</div>
+					<div class="mode-toggles">
+						<button
+							class="mode-btn"
+							class:active={loop_mode}
+							onclick={toggleLoopMode}
+							title="Loop current line (L)"
+						>
+							Loop
+						</button>
+						<button
+							class="mode-btn"
+							class:active={auto_pause_mode}
+							onclick={toggleAutoPause}
+							title="Auto-pause after each line (P)"
+						>
+							Auto-pause
+						</button>
+					</div>
+				</div>
 				<label class="pinyin-toggle">
 					<input type="checkbox" bind:checked={show_pinyin} />
 					<span>Show pinyin</span>
@@ -270,8 +515,8 @@
 
 	.transcript-header {
 		display: flex;
-		justify-content: space-between;
-		align-items: center;
+		flex-direction: column;
+		gap: 0.75rem;
 		margin-bottom: 1rem;
 		position: sticky;
 		top: 0;
@@ -280,9 +525,95 @@
 		z-index: 1;
 	}
 
+	.header-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
 	.transcript-header h2 {
 		font-size: 1rem;
 		margin: 0;
+	}
+
+	.help-btn {
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		border: 1px solid var(--bg-2);
+		background: var(--bg-0);
+		color: var(--fg-2);
+		font-size: 0.875rem;
+		font-weight: 600;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.help-btn:hover {
+		border-color: var(--primary);
+		color: var(--primary);
+	}
+
+	.controls-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.speed-controls {
+		display: flex;
+		gap: 0.25rem;
+	}
+
+	.speed-btn {
+		padding: 0.25rem 0.5rem;
+		font-size: 0.75rem;
+		border: 1px solid var(--bg-2);
+		background: var(--bg-0);
+		border-radius: 4px;
+		cursor: pointer;
+		color: var(--fg-2);
+		transition: all 0.15s;
+	}
+
+	.speed-btn:hover {
+		border-color: var(--primary);
+	}
+
+	.speed-btn.active {
+		background: var(--primary);
+		border-color: var(--primary);
+		color: white;
+	}
+
+	.mode-toggles {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.mode-btn {
+		padding: 0.25rem 0.625rem;
+		font-size: 0.75rem;
+		border: 1px solid var(--bg-2);
+		background: var(--bg-0);
+		border-radius: 4px;
+		cursor: pointer;
+		color: var(--fg-2);
+		transition: all 0.15s;
+	}
+
+	.mode-btn:hover {
+		border-color: var(--primary);
+	}
+
+	.mode-btn.active {
+		background: color-mix(in srgb, var(--primary) 20%, var(--bg-0));
+		border-color: var(--primary);
+		color: var(--primary);
 	}
 
 	.pinyin-toggle {
@@ -296,6 +627,96 @@
 
 	.pinyin-toggle input {
 		accent-color: var(--primary);
+	}
+
+	/* Help Dialog */
+	.help-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.6);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+		padding: 1rem;
+	}
+
+	.help-dialog {
+		background: var(--bg-1);
+		border-radius: 12px;
+		max-width: 400px;
+		width: 100%;
+		max-height: 80vh;
+		overflow-y: auto;
+	}
+
+	.help-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 1rem 1rem 0.5rem;
+		border-bottom: 1px solid var(--bg-2);
+	}
+
+	.help-header h3 {
+		margin: 0;
+		font-size: 1.125rem;
+	}
+
+	.close-btn {
+		width: 28px;
+		height: 28px;
+		border: none;
+		background: transparent;
+		font-size: 1.5rem;
+		color: var(--fg-2);
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 4px;
+	}
+
+	.close-btn:hover {
+		background: var(--bg-2);
+	}
+
+	.help-content {
+		padding: 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.shortcut-group h4 {
+		margin: 0 0 0.5rem;
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		color: var(--fg-2);
+		letter-spacing: 0.05em;
+	}
+
+	.shortcut {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.375rem 0;
+	}
+
+	.shortcut kbd {
+		background: var(--bg-0);
+		border: 1px solid var(--bg-2);
+		border-radius: 4px;
+		padding: 0.25rem 0.5rem;
+		font-family: inherit;
+		font-size: 0.75rem;
+		min-width: 2rem;
+		text-align: center;
+	}
+
+	.shortcut span {
+		color: var(--fg-2);
+		font-size: 0.875rem;
 	}
 
 	.transcript-lines {
