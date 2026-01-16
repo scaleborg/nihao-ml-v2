@@ -9,8 +9,8 @@
 | 1      | Playback controls (keyboard, speed, loop, auto-pause)  | Done    |
 | 2      | UI polish (control bar, visual feedback)               | Skipped |
 | 3      | Character popup (click word → pinyin, definition, HSK) | Done    |
-| 4      | LingQ-inspired features                                | Next    |
-| 5      | TBD                                                    | Backlog |
+| 4      | Word Familiarity System (LingQ-inspired)               | Done    |
+| 5      | Progress & Gamification                                | Next    |
 
 ---
 
@@ -55,9 +55,33 @@
 
 ---
 
+### Sprint 4: Word Familiarity System
+
+**Shipped:** Character familiarity tracking, colored transcript, sidebar with save
+
+| Feature              | Implementation                                      |
+| -------------------- | --------------------------------------------------- |
+| Familiarity levels   | 1-4 (learning) + 5 (known), stored in DB            |
+| Colored transcript   | Blue (new), Yellow (learning), No highlight (known) |
+| Character sidebar    | Slide-in panel with familiarity buttons (1-4 + ✓)   |
+| Per-video word stats | Shows New/Learning/Known counts above transcript    |
+| Mark all as known    | Bulk action with confirmation                       |
+| Keyboard shortcuts   | Press 1-5 in sidebar to set familiarity             |
+
+**Files:**
+
+- `src/lib/chinese/CharacterSidebar.svelte` - Sidebar component
+- `src/lib/chinese/WordStats.svelte` - Stats display
+- `src/routes/api/user-character/+server.ts` - Save familiarity
+- `src/routes/api/user-characters/+server.ts` - Batch lookup
+- `src/routes/api/user-characters/bulk/+server.ts` - Bulk save
+- `src/routes/(site)/video/[slug]/+page.svelte` - Colored transcript
+
+---
+
 ## Next
 
-### Sprint 4: Word Familiarity System
+### Sprint 5: Progress & Gamification
 
 **Goal:** Track user's knowledge of each word, color-code transcript accordingly
 
