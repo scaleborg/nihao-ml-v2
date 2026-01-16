@@ -159,6 +159,9 @@ model UserCharacter {
   character_id String
   character    Character @relation(fields: [character_id], references: [id], onDelete: Cascade)
 
+  // Familiarity level (1-4 = learning, 5 = known)
+  familiarity  Int       @default(1)
+
   // FSRS state
   stability    Float     @default(0)
   difficulty   Float     @default(0)

@@ -2,7 +2,8 @@
 	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
 	import type { PageData } from './$types';
-	import CharacterPopup from '$lib/chinese/CharacterPopup.svelte';
+	import CharacterSidebar from '$lib/chinese/CharacterSidebar.svelte';
+	import WordStats from '$lib/chinese/WordStats.svelte';
 
 	interface Props {
 		data: PageData;
@@ -18,7 +19,32 @@
 	}
 
 	let { data }: Props = $props();
-	let { video } = $derived(data);
+	let { video, is_authenticated } = $derived(data);
+
+	const CHINESE_CHAR_REGEX = /[\u4e00-\u9fff]/;
+
+	// Reactive state for user's character knowledge
+	let user_characters = $state<Record<string, { familiarity: number; state: number }>>({});
+
+	// Initialize from server data
+	$effect(() => {
+		user_characters = { ...data.user_characters };
+	});
+
+	// Extract unique Chinese characters from transcript
+	let unique_chars = $derived.by(() => {
+		const chars = new Set<string>();
+		if (video.transcript?.lines) {
+			for (const line of video.transcript.lines) {
+				for (const char of line.text) {
+					if (CHINESE_CHAR_REGEX.test(char)) {
+						chars.add(char);
+					}
+				}
+			}
+		}
+		return [...chars];
+	});
 
 	// Basic playback state
 	let show_pinyin = $state(true);
@@ -34,17 +60,28 @@
 	let show_help = $state(false);
 	let has_paused_for_line = $state(false); // Track if we've already paused for the current line
 
-	// Phase 3: Character popup state
-	let popup_visible = $state(false);
-	let popup_character = $state<string | null>(null);
-	let popup_data = $state<CharacterData | null>(null);
-	let popup_loading = $state(false);
-	let popup_error = $state<string | null>(null);
-	let popup_position = $state({ x: 0, y: 0 });
+	// Phase 3: Character sidebar state
+	let sidebar_visible = $state(false);
+	let sidebar_character = $state<string | null>(null);
+	let sidebar_data = $state<CharacterData | null>(null);
+	let sidebar_loading = $state(false);
+	let sidebar_error = $state<string | null>(null);
 	let character_cache = new Map<string, CharacterData | null>();
 
+	// Get character familiarity status for coloring
+	function get_character_status(char: string): 'new' | 'learning' | 'known' {
+		const uc = user_characters[char];
+		if (!uc) return 'new';
+		if (uc.familiarity === 5) return 'known';
+		return 'learning';
+	}
+
+	// Get current familiarity level for sidebar
+	function get_current_familiarity(char: string): number {
+		return user_characters[char]?.familiarity ?? 0;
+	}
+
 	const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2];
-	const CHINESE_CHAR_REGEX = /[\u4e00-\u9fff]/;
 
 	// YouTube Player API
 	let player: YT.Player | null = null;
@@ -266,7 +303,7 @@
 		has_paused_for_line = false;
 	}
 
-	// Phase 3: Character popup functions
+	// Phase 3: Character sidebar functions
 	function splitChineseText(text: string) {
 		return [...text].map((char) => ({
 			char,
@@ -274,50 +311,108 @@
 		}));
 	}
 
-	function closePopup() {
-		popup_visible = false;
-		popup_character = null;
-		popup_data = null;
-		popup_loading = false;
-		popup_error = null;
+	function closeSidebar() {
+		sidebar_visible = false;
+		sidebar_character = null;
+		sidebar_data = null;
+		sidebar_loading = false;
+		sidebar_error = null;
 	}
 
 	async function handleCharacterClick(event: MouseEvent | KeyboardEvent, char: string) {
 		event.stopPropagation();
 
-		const target = event.target as HTMLElement;
-		const rect = target.getBoundingClientRect();
-		popup_position = { x: rect.left + rect.width / 2, y: rect.bottom + 8 };
-		popup_character = char;
-		popup_visible = true;
+		sidebar_character = char;
+		sidebar_visible = true;
 
 		// Check cache
 		if (character_cache.has(char)) {
-			popup_data = character_cache.get(char) ?? null;
-			popup_loading = false;
+			sidebar_data = character_cache.get(char) ?? null;
+			sidebar_loading = false;
 			return;
 		}
 
 		// Fetch from API
-		popup_loading = true;
-		popup_data = null;
-		popup_error = null;
+		sidebar_loading = true;
+		sidebar_data = null;
+		sidebar_error = null;
 
 		try {
 			const res = await fetch(`/api/character/${encodeURIComponent(char)}`);
 			if (res.ok) {
-				popup_data = await res.json();
-				character_cache.set(char, popup_data);
+				sidebar_data = await res.json();
+				character_cache.set(char, sidebar_data);
 			} else if (res.status === 404) {
-				popup_data = null;
+				sidebar_data = null;
 				character_cache.set(char, null);
 			} else {
-				popup_error = 'Failed to load';
+				sidebar_error = 'Failed to load';
 			}
 		} catch {
-			popup_error = 'Network error';
+			sidebar_error = 'Network error';
 		} finally {
-			popup_loading = false;
+			sidebar_loading = false;
+		}
+	}
+
+	async function handleSaveFamiliarity(level: number) {
+		if (!sidebar_character || !is_authenticated) return;
+
+		const char = sidebar_character;
+
+		// Optimistic update
+		user_characters[char] = {
+			...user_characters[char],
+			familiarity: level,
+			state: user_characters[char]?.state ?? 0
+		};
+
+		try {
+			const res = await fetch('/api/user-character', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ character: char, familiarity: level })
+			});
+
+			if (!res.ok) {
+				console.error('Failed to save familiarity');
+			}
+		} catch (err) {
+			console.error('Error saving familiarity:', err);
+		}
+	}
+
+	async function handleMarkAllKnown() {
+		if (!is_authenticated) return;
+
+		const chars_to_update = unique_chars.filter((char) => {
+			const uc = user_characters[char];
+			return !uc || uc.familiarity < 5;
+		});
+
+		if (chars_to_update.length === 0) return;
+
+		// Optimistic update
+		for (const char of chars_to_update) {
+			user_characters[char] = {
+				...user_characters[char],
+				familiarity: 5,
+				state: user_characters[char]?.state ?? 0
+			};
+		}
+
+		try {
+			const res = await fetch('/api/user-characters/bulk', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ characters: chars_to_update, familiarity: 5 })
+			});
+
+			if (!res.ok) {
+				console.error('Failed to mark all as known');
+			}
+		} catch (err) {
+			console.error('Error marking all as known:', err);
 		}
 	}
 
@@ -373,9 +468,9 @@
 				show_help = !show_help;
 				break;
 			case 'escape':
-				if (popup_visible) {
+				if (sidebar_visible) {
 					event.preventDefault();
-					closePopup();
+					closeSidebar();
 				} else if (show_help) {
 					event.preventDefault();
 					show_help = false;
@@ -504,6 +599,12 @@
 			</div>
 
 			{#if video.transcript?.lines && video.transcript.lines.length > 0}
+				<WordStats
+					{unique_chars}
+					{user_characters}
+					{is_authenticated}
+					on_mark_all_known={handleMarkAllKnown}
+				/>
 				<div class="transcript-lines">
 					{#each video.transcript.lines as line, i}
 						<button
@@ -520,8 +621,11 @@
 								<span class="chinese">
 									{#each splitChineseText(line.text) as { char, isClickable }}
 										{#if isClickable}
+											{@const status = get_character_status(char)}
 											<span
 												class="clickable-char"
+												class:char-new={status === 'new'}
+												class:char-learning={status === 'learning'}
 												role="button"
 												tabindex="-1"
 												onclick={(e) => handleCharacterClick(e, char)}
@@ -543,14 +647,16 @@
 	</div>
 </div>
 
-{#if popup_visible && popup_character}
-	<CharacterPopup
-		character={popup_character}
-		data={popup_data}
-		loading={popup_loading}
-		error={popup_error}
-		position={popup_position}
-		onclose={closePopup}
+{#if sidebar_visible && sidebar_character}
+	<CharacterSidebar
+		character={sidebar_character}
+		data={sidebar_data}
+		loading={sidebar_loading}
+		error={sidebar_error}
+		familiarity={get_current_familiarity(sidebar_character)}
+		{is_authenticated}
+		onclose={closeSidebar}
+		onsave={handleSaveFamiliarity}
 	/>
 {/if}
 
@@ -909,7 +1015,7 @@
 	.clickable-char {
 		background: none;
 		border: none;
-		padding: 0;
+		padding: 0 1px;
 		margin: 0;
 		font: inherit;
 		color: inherit;
@@ -918,8 +1024,19 @@
 		transition: background-color 0.15s;
 	}
 
+	/* Character familiarity colors */
+	.clickable-char.char-new {
+		background: color-mix(in srgb, #3b82f6 30%, transparent);
+	}
+
+	.clickable-char.char-learning {
+		background: color-mix(in srgb, var(--yellow-3, #fbbf24) 40%, transparent);
+	}
+
+	/* Known characters have no background (white/default) */
+
 	.clickable-char:hover {
-		background: color-mix(in srgb, var(--primary) 30%, transparent);
+		background: color-mix(in srgb, var(--primary) 40%, transparent);
 	}
 
 	.no-transcript {
