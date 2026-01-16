@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Header from '../routes/(site)/Header.svelte';
+	import Logo from '$lib/Logo.svelte';
 
 	interface Props {
 		user?: { roles?: string[] } | null;
@@ -16,9 +17,9 @@
 >
 	<Header transparent={true} />
 	<div class="hero">
-		<div class="logo">
+		<div class="logo hero-logo">
 			<a href="/">
-				<span class="logo-text">nihao<span class="dot">.ml</span></span>
+				<Logo />
 			</a>
 		</div>
 		<h2 class="text-center">Learn Chinese from Real Content</h2>
@@ -76,24 +77,8 @@
 		text-decoration: none;
 	}
 
-	.logo-text {
-		font-family: var(--font-family-heading, system-ui);
+	.hero-logo :global(.text) {
 		font-size: clamp(3rem, 10vw, 5rem);
-		font-weight: 900;
-		color: var(--primary, #fabf46);
-		display: block;
-		line-height: 1;
-		text-align: center;
-		mask-image: url('$assets/Grit Mask@2x.png');
-		mask-repeat: repeat;
-		mask-size: 250px;
-		-webkit-mask-image: url('$assets/Grit Mask@2x.png');
-		-webkit-mask-repeat: repeat;
-		-webkit-mask-size: 250px;
-	}
-
-	.dot {
-		color: var(--primary, #fabf46);
 	}
 
 	h2 {
