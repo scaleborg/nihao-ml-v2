@@ -1,0 +1,224 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+// ============================================================================
+// AUTH MODELS (kept from Syntax.fm)
+// ============================================================================
+
+model User {
+  id         String   @id @default(uuid())
+  email      String?  @unique
+  name       String?
+  username   String?
+  avatar_url String?
+  github_id  Int?     @unique
+  google_id  String?  @unique
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  theme      String   @default("system")
+
+  // Relations
+  sessions   Session[]
+  roles      UserRole[]
+  videos     UserVideo[]
+  characters UserCharacter[]
+  vocabulary UserVocabulary[]
+  sessions_study StudySession[]
+}
+
+model Role {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  userRoles UserRole[]
+}
+
+model UserRole {
+  id     String @id @default(uuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId String
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+}
+
+model Session {
+  id            Int      @id @default(autoincrement())
+  user_id       String?
+  user          User?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  access_token  String?  @unique
+  session_token String   @unique
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  ip            String?
+  country       String?
+
+  @@index([user_id])
+}
+
+// ============================================================================
+// VIDEO & TRANSCRIPT MODELS
+// ============================================================================
+
+model Video {
+  id           String   @id // YouTube video ID
+  slug         String   @unique
+  url          String
+  title        String   @db.Text
+  channel_name String?
+  thumbnail    String?
+  duration     Int?     // seconds
+
+  // Curation
+  is_public    Boolean  @default(false)
+  added_by     String?  // User ID who imported (null = admin-curated)
+
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  transcript   Transcript?
+  user_videos  UserVideo[]
+}
+
+model Transcript {
+  id       String @id @default(uuid())
+  video_id String @unique
+  video    Video  @relation(fields: [video_id], references: [id], onDelete: Cascade)
+
+  lines TranscriptLine[]
+}
+
+model TranscriptLine {
+  id            String     @id @default(uuid())
+  transcript_id String
+  transcript    Transcript @relation(fields: [transcript_id], references: [id], onDelete: Cascade)
+
+  index      Int      // Line number (0-indexed)
+  start_time Float    // seconds
+  end_time   Float    // seconds
+  text       String   @db.Text // Chinese text
+  pinyin     String?  @db.Text // Generated pinyin
+
+  @@index([transcript_id])
+  @@index([transcript_id, index])
+}
+
+// ============================================================================
+// USER LEARNING STATE
+// ============================================================================
+
+model UserVideo {
+  id       String @id @default(uuid())
+  user_id  String
+  user     User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  video_id String
+  video    Video  @relation(fields: [video_id], references: [id], onDelete: Cascade)
+
+  progress  Float    @default(0) // Playback position (seconds)
+  completed Boolean  @default(false)
+  added_at  DateTime @default(now())
+
+  @@unique([user_id, video_id])
+  @@index([user_id])
+  @@index([video_id])
+}
+
+// ============================================================================
+// CHARACTER DICTIONARY & SRS
+// ============================================================================
+
+model Character {
+  id           String  @id // The character itself (e.g., "好")
+  pinyin       String  // Primary pronunciation
+  pinyin_alt   String? // Alternative pronunciations (JSON array)
+  definition   String  @db.Text // English definition
+  hsk_level    Int?    // 1-6, null if not in HSK
+  frequency    Int?    // Usage frequency rank
+  radical      String? // Primary radical
+  components   String? // JSON array of components
+  stroke_count Int?
+  stroke_order String? @db.Text // Stroke order data for animation
+
+  user_characters UserCharacter[]
+}
+
+model UserCharacter {
+  id           String    @id @default(uuid())
+  user_id      String
+  user         User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  character_id String
+  character    Character @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  // FSRS state
+  stability    Float     @default(0)
+  difficulty   Float     @default(0)
+  last_review  DateTime?
+  next_review  DateTime?
+  reps         Int       @default(0)
+  lapses       Int       @default(0)
+  state        Int       @default(0) // 0=new, 1=learning, 2=review, 3=relearning
+
+  first_seen   DateTime  @default(now())
+
+  @@unique([user_id, character_id])
+  @@index([user_id])
+  @@index([character_id])
+  @@index([user_id, next_review])
+}
+
+model UserVocabulary {
+  id       String @id @default(uuid())
+  user_id  String
+  user     User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  word     String // The word/phrase
+  pinyin   String
+  meaning  String? @db.Text
+  context  String? @db.Text // Source sentence
+  video_id String? // Where they found it
+
+  // FSRS state
+  stability   Float     @default(0)
+  difficulty  Float     @default(0)
+  last_review DateTime?
+  next_review DateTime?
+  reps        Int       @default(0)
+  state       Int       @default(0) // 0=new, 1=learning, 2=review, 3=relearning
+
+  created_at DateTime @default(now())
+
+  @@index([user_id])
+  @@index([user_id, next_review])
+}
+
+// ============================================================================
+// STUDY TRACKING
+// ============================================================================
+
+model StudySession {
+  id       String @id @default(uuid())
+  user_id  String
+  user     User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  type     String  // "video", "review", "character"
+  video_id String?
+  duration Int     // seconds
+
+  chars_studied Int @default(0)
+  words_studied Int @default(0)
+
+  created_at DateTime @default(now())
+
+  @@index([user_id])
+  @@index([user_id, created_at])
+}
