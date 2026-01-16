@@ -1,23 +1,14 @@
 <script lang="ts">
+	import NihaoHero from '$lib/NihaoHero.svelte';
+
 	let { data } = $props();
 
 	// Use all_videos if logged in (shows private videos too), otherwise just public
 	let videos = $derived(data.user ? data.all_videos : data.videos);
 </script>
 
-<section class="hero">
-	<h1>nihao.ml</h1>
-	<p class="tagline">Learn Chinese from real content</p>
-
-	<div class="hero-actions">
-		{#if data.user}
-			<a href="/admin/import" class="button primary">Import Video</a>
-			<a href="/dashboard" class="button">Dashboard</a>
-		{:else}
-			<a href="/login" class="button primary">Get Started</a>
-		{/if}
-	</div>
-</section>
+<h1 class="visually-hidden">nihao.ml - Learn Chinese from Real Content</h1>
+<NihaoHero user={data.user} />
 
 {#if videos && videos.length > 0}
 	<section class="videos">
@@ -45,6 +36,9 @@
 				</a>
 			{/each}
 		</div>
+		<div class="see-all-wrapper">
+			<a href="/videos" class="see-all-button">See all videos</a>
+		</div>
 	</section>
 {:else}
 	<section class="features">
@@ -67,40 +61,51 @@
 {/if}
 
 <style>
-	.hero {
-		text-align: center;
-		padding: 4rem 0;
-	}
-
-	.hero h1 {
-		font-size: 3rem;
-		margin-bottom: 1rem;
-	}
-
-	.tagline {
-		font-size: 1.5rem;
-		opacity: 0.8;
-		margin-bottom: 2rem;
-	}
-
-	.hero-actions {
-		display: flex;
-		gap: 1rem;
-		justify-content: center;
-	}
-
-	.button.primary {
-		background: var(--primary);
-		color: var(--black);
-	}
-
 	/* Videos Section */
 	.videos {
 		padding: 2rem 0;
 	}
 
+	.see-all-wrapper {
+		display: flex;
+		justify-content: center;
+		margin-top: 2rem;
+	}
+
+	.see-all-button {
+		white-space: nowrap;
+		cursor: pointer;
+		text-decoration: none;
+		border: none;
+		font-family: var(--body-font-family);
+		font-weight: 600;
+		padding: 6px 15px;
+		font-size: var(--body-font-size, 1rem);
+		border-radius: var(--brad, 5px);
+		background: var(--primary);
+		color: var(--yellow-8, #5c4813);
+		display: inline-flex;
+		justify-content: center;
+		align-items: center;
+		gap: 10px;
+		box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.2);
+		transition: background 0.2s ease-in-out;
+	}
+
 	.videos h2 {
 		margin-bottom: 1.5rem;
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		text-align: center;
+	}
+
+	.videos h2::before,
+	.videos h2::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--fg-2, rgba(255, 255, 255, 0.3));
 	}
 
 	.video-grid {

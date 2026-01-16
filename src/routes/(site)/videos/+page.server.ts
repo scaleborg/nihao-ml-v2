@@ -1,5 +1,3 @@
-import type { Actions } from '@sveltejs/kit';
-import { redis } from '$/hooks.server';
 import { prisma_client } from '$/server/prisma-client';
 import type { PageServerLoad } from './$types';
 
@@ -60,7 +58,7 @@ const PLACEHOLDER_TITLES = [
 function generate_placeholder_videos(count: number) {
 	return Array.from({ length: count }, (_, i) => ({
 		id: `placeholder-${i}`,
-		youtube_id: 'dQw4w9WgXcQ', // Placeholder YouTube ID
+		youtube_id: 'dQw4w9WgXcQ',
 		slug: `placeholder-video-${i}`,
 		title: PLACEHOLDER_TITLES[i % PLACEHOLDER_TITLES.length],
 		channel_name: [
@@ -70,9 +68,9 @@ function generate_placeholder_videos(count: number) {
 			'HSK Academy',
 			'Chinese Zero to Hero'
 		][i % 5],
-		thumbnail: `https://picsum.photos/seed/${i + 100}/480/270`, // Random placeholder images
+		thumbnail: `https://picsum.photos/seed/${i + 100}/480/270`,
 		is_public: true,
-		created_at: new Date(Date.now() - i * 86400000), // Stagger dates
+		created_at: new Date(Date.now() - i * 86400000),
 		transcript: {
 			_count: { lines: Math.floor(Math.random() * 500) + 100 }
 		}
@@ -80,11 +78,10 @@ function generate_placeholder_videos(count: number) {
 }
 
 export const load: PageServerLoad = async ({ url }) => {
-	// Fetch recent videos
+	// Fetch all public videos
 	const videos = await prisma_client.video.findMany({
 		where: { is_public: true },
 		orderBy: { created_at: 'desc' },
-		take: 12,
 		include: {
 			transcript: {
 				select: {
@@ -96,61 +93,15 @@ export const load: PageServerLoad = async ({ url }) => {
 		}
 	});
 
-	// Also fetch all videos for logged-in users (including private ones they imported)
-	const all_videos = await prisma_client.video.findMany({
-		orderBy: { created_at: 'desc' },
-		take: 20,
-		include: {
-			transcript: {
-				select: {
-					_count: {
-						select: { lines: true }
-					}
-				}
-			}
-		}
-	});
-
-	// Add placeholder videos for testing (show 9 on homepage)
+	// Add placeholder videos for testing (50 total)
 	const placeholder_videos = generate_placeholder_videos(50);
-	const videos_with_placeholders = [...videos, ...placeholder_videos].slice(0, 9);
-	const all_videos_with_placeholders = [...all_videos, ...placeholder_videos].slice(0, 9);
+	const all_videos = [...videos, ...placeholder_videos];
 
 	return {
-		videos: videos_with_placeholders,
-		all_videos: all_videos_with_placeholders,
+		videos: all_videos,
 		meta: {
-			canonical: `${url.protocol}//${url.host}`
+			title: 'All Videos | nihao.ml',
+			canonical: `${url.protocol}//${url.host}/videos`
 		}
 	};
-};
-
-export const actions: Actions = {
-	logout: async function logout({ cookies }) {
-		const access_token = cookies.get('access_token');
-		if (access_token) {
-			try {
-				await prisma_client.session.delete({
-					where: { access_token }
-				});
-			} catch {
-				// Session may not exist, that's ok
-			}
-		}
-		// Remove Auth Token Cookie
-		cookies.delete('access_token', {
-			httpOnly: true,
-			path: '/',
-			secure: false // Allow on localhost
-		});
-		return {
-			message: 'Logout Successful'
-		};
-	},
-	dump_cache: async function dump_cache() {
-		await redis?.flushall();
-		return {
-			message: 'Dump Cache '
-		};
-	}
 };
