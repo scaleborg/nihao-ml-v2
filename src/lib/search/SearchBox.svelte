@@ -177,20 +177,12 @@
 				<div transition:fade={{ duration: 100 }} class="recent-searches">
 					<div>
 						<!-- prettier-ignore -->
-						<pre style:color={active_color} style="overflow: hidden; width: 201px;">
-███╗░░██╗██╗██╗░░██╗
-████╗░██║██║██║░░██║
-██╔██╗██║██║███████║
-██║╚████║██║██╔══██║
-██║░╚███║██║██║░░██║
-╚═╝░░╚══╝╚═╝╚═╝░░╚═╝
+						<pre style:color={active_color} style="overflow: hidden;">
+┏┓╻╻╻ ╻┏━┓┏━┓
+┃┗┫┃┣━┫┣━┫┃ ┃
+╹ ╹╹╹ ╹╹ ╹┗━┛
 
-░█████╗░░█████╗░
-██╔══██╗██╔══██╗
-███████║██║░░██║
-██╔══██║██║░░██║
-██║░░██║╚█████╔╝
-╚═╝░░╚═╝░╚════╝░
+    你 好
 					</pre>
 						<div class="color-boxes">
 							{#each Array(12) as _, i (i)}
