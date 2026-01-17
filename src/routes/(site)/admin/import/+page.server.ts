@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { prisma_client } from '$/server/prisma-client';
 import { extractVideoId, fetchVideoMetadata } from '$/server/video/youtube_api';
-import { fetchChineseCaptions, captionToSeconds } from '$/server/video/captions';
+import { fetchChineseCaptions, type Caption } from '$/server/video/captions';
 import { generatePinyin } from '$/server/video/pinyin';
 import slug from 'speakingurl';
 import type { Actions } from './$types';
@@ -11,6 +11,7 @@ export const actions = {
 		const form_data = await request.formData();
 		const url = form_data.get('url') as string;
 		const is_public = form_data.get('is_public') === 'on';
+		const client_subtitles_raw = form_data.get('client_subtitles') as string | null;
 
 		// Validate URL
 		if (!url || typeof url !== 'string') {
@@ -41,16 +42,34 @@ export const actions = {
 			});
 		}
 
-		// Fetch Chinese captions
-		let captions;
-		try {
-			captions = await fetchChineseCaptions(video_id);
-		} catch (e) {
-			console.error('Caption fetch error:', e);
-			return fail(400, { error: 'Error fetching captions. Please try again.', url });
+		// Try client-provided subtitles first, then server fallback
+		let captions: Caption[] = [];
+
+		if (client_subtitles_raw) {
+			try {
+				const parsed = JSON.parse(client_subtitles_raw);
+				if (Array.isArray(parsed) && parsed.length > 0) {
+					captions = parsed.map((s: { start: number; end: number; text: string }) => ({
+						start: s.start,
+						end: s.end,
+						text: s.text
+					}));
+				}
+			} catch {
+				// Invalid JSON, fall through to server fetch
+			}
 		}
 
-		if (!captions || captions.length === 0) {
+		// Server-side fallback if client didn't provide subtitles
+		if (captions.length === 0) {
+			try {
+				captions = await fetchChineseCaptions(video_id);
+			} catch (e) {
+				console.error('Server caption fetch error:', e);
+			}
+		}
+
+		if (captions.length === 0) {
 			return fail(400, {
 				error:
 					'No Chinese captions found for this video. Please choose a video with Chinese subtitles.',
@@ -61,7 +80,7 @@ export const actions = {
 		// Generate slug from title
 		const video_slug = slug(metadata.title);
 
-		// Create video with transcript and lines in a transaction
+		// Create video with transcript and lines
 		try {
 			const video = await prisma_client.video.create({
 				data: {
@@ -75,16 +94,13 @@ export const actions = {
 					transcript: {
 						create: {
 							lines: {
-								create: captions.map((caption, index) => {
-									const times = captionToSeconds(caption);
-									return {
-										index,
-										start_time: times.start,
-										end_time: times.end,
-										text: caption.text,
-										pinyin: generatePinyin(caption.text)
-									};
-								})
+								create: captions.map((caption, index) => ({
+									index,
+									start_time: caption.start,
+									end_time: caption.end,
+									text: caption.text,
+									pinyin: generatePinyin(caption.text)
+								}))
 							}
 						}
 					}
