@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ActionData } from './$types';
 	import { enhance } from '$app/forms';
+	import { fetchChineseSubtitles, extractVideoId, type Subtitle } from '$lib/youtube-captions';
 
 	interface Props {
 		form: ActionData;
@@ -8,6 +9,8 @@
 
 	let { form }: Props = $props();
 	let loading = $state(false);
+	let status = $state('');
+	let client_subtitles = $state<Subtitle[] | null>(null);
 </script>
 
 <svelte:head>
@@ -30,14 +33,49 @@
 		</div>
 	{/if}
 
+	{#if status}
+		<div class="status">
+			{status}
+		</div>
+	{/if}
+
 	<form
 		method="POST"
-		use:enhance={() => {
+		use:enhance={({ formData }) => {
 			loading = true;
+			status = '';
+
+			// Add client subtitles if we fetched them
+			if (client_subtitles) {
+				formData.set('client_subtitles', JSON.stringify(client_subtitles));
+			}
+
 			return async ({ update }) => {
 				loading = false;
+				status = '';
+				client_subtitles = null;
 				await update();
 			};
+		}}
+		onsubmit={async (e) => {
+			const form_el = e.currentTarget as HTMLFormElement;
+			const url = new FormData(form_el).get('url') as string;
+			const video_id = extractVideoId(url);
+
+			if (!video_id) return; // Let server validate
+
+			// Try client-side fetch first
+			status = 'Fetching captions...';
+			try {
+				client_subtitles = await fetchChineseSubtitles(video_id);
+				if (client_subtitles) {
+					status = `Found ${client_subtitles.length} caption lines`;
+				} else {
+					status = 'No captions found client-side, server will try...';
+				}
+			} catch {
+				status = 'Client fetch failed, server will try...';
+			}
 		}}
 	>
 		<div class="field">
@@ -59,9 +97,9 @@
 				<input type="checkbox" name="is_public" disabled={loading} />
 				<span>Make public</span>
 			</label>
-			<span class="hint"
-				>Public videos appear in the browse list. Leave unchecked for personal imports.</span
-			>
+			<span class="hint">
+				Public videos appear in the browse list. Leave unchecked for personal imports.
+			</span>
 		</div>
 
 		<button type="submit" disabled={loading}>
@@ -119,6 +157,14 @@
 	.error {
 		background: var(--error-bg, #fee2e2);
 		color: var(--error-fg, #dc2626);
+		padding: 1rem;
+		border-radius: 8px;
+		margin-bottom: 1.5rem;
+	}
+
+	.status {
+		background: var(--info-bg, #dbeafe);
+		color: var(--info-fg, #1d4ed8);
 		padding: 1rem;
 		border-radius: 8px;
 		margin-bottom: 1.5rem;
