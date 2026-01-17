@@ -1,134 +1,32 @@
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import { tmpdir } from 'os';
-import { join } from 'path';
-import { readFile, unlink } from 'fs/promises';
+import { YoutubeTranscript } from 'youtube-transcript';
 
-const execFileAsync = promisify(execFile);
-
-interface Caption {
-	start: string;
-	dur: string;
+export interface Caption {
+	start: number;
+	end: number;
 	text: string;
 }
 
-/**
- * Parse VTT subtitle content into Caption array
- */
-function parseVTT(vttContent: string): Caption[] {
-	const captions: Caption[] = [];
-	const lines = vttContent.split('\n');
-
-	let i = 0;
-	// Skip header
-	while (i < lines.length && !lines[i].includes('-->')) {
-		i++;
-	}
-
-	while (i < lines.length) {
-		const line = lines[i].trim();
-
-		// Look for timestamp line (e.g., "00:00:06.166 --> 00:00:07.266")
-		if (line.includes('-->')) {
-			const [startTime, endTime] = line.split('-->').map((t) => t.trim());
-
-			// Collect text lines until next timestamp or empty line
-			const textLines: string[] = [];
-			i++;
-			while (i < lines.length && !lines[i].includes('-->') && lines[i].trim() !== '') {
-				// Skip lines that are just numbers (cue identifiers)
-				if (!/^\d+$/.test(lines[i].trim())) {
-					textLines.push(lines[i].trim());
-				}
-				i++;
-			}
-
-			if (textLines.length > 0) {
-				const text = textLines.join(' ').replace(/<[^>]+>/g, ''); // Remove HTML tags
-				const start = vttTimeToSeconds(startTime);
-				const end = vttTimeToSeconds(endTime);
-				const dur = (end - start).toFixed(3);
-
-				captions.push({
-					start: start.toFixed(3),
-					dur,
-					text
-				});
-			}
-		} else {
-			i++;
-		}
-	}
-
-	return captions;
-}
+const CHINESE_LANGS = ['zh-Hans', 'zh-CN', 'zh-Hant', 'zh-TW', 'zh'];
 
 /**
- * Convert VTT timestamp to seconds
- */
-function vttTimeToSeconds(time: string): number {
-	// Format: HH:MM:SS.mmm or MM:SS.mmm
-	const parts = time.split(':');
-	if (parts.length === 3) {
-		const [hours, minutes, seconds] = parts;
-		return parseFloat(hours) * 3600 + parseFloat(minutes) * 60 + parseFloat(seconds);
-	} else if (parts.length === 2) {
-		const [minutes, seconds] = parts;
-		return parseFloat(minutes) * 60 + parseFloat(seconds);
-	}
-	return 0;
-}
-
-/**
- * Fetch Chinese captions from a YouTube video using yt-dlp
- * Fetches auto-generated captions in zh-Hans (Simplified Chinese)
+ * Fetch Chinese captions from YouTube using youtube-transcript npm package
+ * Server-side fallback when client-side fetch fails
  */
 export async function fetchChineseCaptions(videoId: string): Promise<Caption[]> {
-	const outputPath = join(tmpdir(), `yt-${videoId}`);
-	const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-
-	// Language codes to try in order of preference
-	const languages = ['zh-Hans', 'zh-Hant', 'zh', 'zh-CN', 'zh-TW'];
-
-	for (const lang of languages) {
+	for (const lang of CHINESE_LANGS) {
 		try {
-			// Use yt-dlp to download auto-generated subtitles
-			// Using execFile with args array to prevent command injection
-			await execFileAsync(
-				'yt-dlp',
-				[
-					'--write-auto-sub',
-					'--sub-lang',
-					lang,
-					'--sub-format',
-					'vtt',
-					'--skip-download',
-					'-o',
-					outputPath,
-					videoUrl
-				],
-				{ timeout: 30000 }
-			);
+			const entries = await YoutubeTranscript.fetchTranscript(videoId, { lang });
 
-			// Check for downloaded subtitle file
-			const subtitlePath = `${outputPath}.${lang}.vtt`;
-
-			try {
-				const vttContent = await readFile(subtitlePath, 'utf-8');
-
-				// Clean up the file
-				await unlink(subtitlePath).catch(() => {});
-
-				const captions = parseVTT(vttContent);
-				if (captions.length > 0) {
-					return captions;
-				}
-			} catch {
-				// File doesn't exist for this language, try next
-				continue;
+			if (entries && entries.length > 0) {
+				return entries
+					.map((entry) => ({
+						start: entry.offset / 1000,
+						end: (entry.offset + entry.duration) / 1000,
+						text: entry.text?.trim() || ''
+					}))
+					.filter((c) => c.text.length > 0);
 			}
 		} catch {
-			// yt-dlp failed for this language, try next
 			continue;
 		}
 	}
@@ -137,13 +35,14 @@ export async function fetchChineseCaptions(videoId: string): Promise<Caption[]> 
 }
 
 /**
- * Convert caption timestamps to seconds
+ * Convert legacy caption format (for backwards compatibility)
+ * @deprecated Use Caption interface directly
  */
-export function captionToSeconds(caption: Caption): { start: number; end: number } {
+export function captionToSeconds(caption: { start: string; dur: string }): {
+	start: number;
+	end: number;
+} {
 	const start = parseFloat(caption.start);
 	const duration = parseFloat(caption.dur);
-	return {
-		start,
-		end: start + duration
-	};
+	return { start, end: start + duration };
 }
