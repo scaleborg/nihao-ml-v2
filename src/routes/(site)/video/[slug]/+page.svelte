@@ -40,7 +40,6 @@
 	let playback_speed = $state(1);
 	let loop_mode = $state(false);
 	let auto_pause_mode = $state(false);
-	let show_help = $state(false);
 	let has_paused_for_line = $state(false);
 
 	// Word pool state
@@ -105,7 +104,7 @@
 		return 'learning';
 	}
 
-	const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+	const SPEED_OPTIONS = [0.8, 0.85, 0.9, 0.95, 1, 1.1, 1.2, 1.3];
 	let transcript_container: HTMLDivElement | undefined;
 
 	// Count unique Chinese characters in transcript
@@ -353,11 +352,12 @@
 				event.preventDefault();
 				seekRelative(5);
 				break;
-			case '[':
+			case '-':
 				event.preventDefault();
 				adjustSpeed(-1);
 				break;
-			case ']':
+			case '=':
+			case '+':
 				event.preventDefault();
 				adjustSpeed(1);
 				break;
@@ -369,17 +369,14 @@
 				event.preventDefault();
 				toggleAutoPause();
 				break;
-			case '?':
+			case 'y':
 				event.preventDefault();
-				show_help = !show_help;
+				show_pinyin = !show_pinyin;
 				break;
 			case 'escape':
 				if (expanded_pool_char) {
 					event.preventDefault();
 					expanded_pool_char = null;
-				} else if (show_help) {
-					event.preventDefault();
-					show_help = false;
 				}
 				break;
 		}
@@ -392,54 +389,6 @@
 </svelte:head>
 
 <svelte:window onkeydown={handleKeydown} />
-
-{#if show_help}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="help-overlay"
-		onclick={() => (show_help = false)}
-		onkeydown={(e) => e.key === 'Escape' && (show_help = false)}
-		role="dialog"
-		aria-modal="true"
-		tabindex="-1"
-	>
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="help-dialog"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.stopPropagation()}
-		>
-			<div class="help-header">
-				<h3>Keyboard Shortcuts</h3>
-				<button class="close-btn" onclick={() => (show_help = false)}>×</button>
-			</div>
-			<div class="help-content">
-				<div class="shortcut-group">
-					<h4>Playback</h4>
-					<div class="shortcut"><kbd>Space</kbd><span>Play / Pause</span></div>
-					<div class="shortcut"><kbd>←</kbd><span>Seek back 5s</span></div>
-					<div class="shortcut"><kbd>→</kbd><span>Seek forward 5s</span></div>
-				</div>
-				<div class="shortcut-group">
-					<h4>Navigation</h4>
-					<div class="shortcut"><kbd>A</kbd><span>Previous line</span></div>
-					<div class="shortcut"><kbd>S</kbd><span>Next line</span></div>
-					<div class="shortcut"><kbd>R</kbd><span>Repeat line</span></div>
-				</div>
-				<div class="shortcut-group">
-					<h4>Speed</h4>
-					<div class="shortcut"><kbd>[</kbd><span>Slower</span></div>
-					<div class="shortcut"><kbd>]</kbd><span>Faster</span></div>
-				</div>
-				<div class="shortcut-group">
-					<h4>Modes</h4>
-					<div class="shortcut"><kbd>L</kbd><span>Loop</span></div>
-					<div class="shortcut"><kbd>P</kbd><span>Auto-pause</span></div>
-				</div>
-			</div>
-		</div>
-	</div>
-{/if}
 
 {#if flying_char}
 	<div
@@ -511,17 +460,16 @@
 	<div class="controls-bar">
 		<div class="controls-left">
 			<span class="play-state" class:playing={is_playing}>{is_playing ? '▶' : '⏸'}</span>
-			<div class="speed-buttons">
-				{#each SPEED_OPTIONS as speed}
-					<button
-						class="speed-btn"
-						class:active={playback_speed === speed}
-						onclick={() => setSpeed(speed)}
-						title="{speed}x"
-					>
-						{speed}x
-					</button>
-				{/each}
+			<div class="speed-control">
+				<input
+					type="range"
+					min="0"
+					max={SPEED_OPTIONS.length - 1}
+					value={SPEED_OPTIONS.indexOf(playback_speed)}
+					oninput={(e) => setSpeed(SPEED_OPTIONS[parseInt(e.currentTarget.value)])}
+					class="speed-slider"
+				/>
+				<span class="speed-value">{playback_speed}x</span>
 			</div>
 		</div>
 		<div class="controls-right">
@@ -539,9 +487,6 @@
 				class:active={show_pinyin}
 				onclick={() => (show_pinyin = !show_pinyin)}
 				title="Pinyin">Pinyin</button
-			>
-			<button class="help-btn" onclick={() => (show_help = true)} title="Keyboard shortcuts"
-				>Shortcuts</button
 			>
 		</div>
 	</div>
@@ -627,6 +572,35 @@
 			<p class="no-transcript">No transcript available.</p>
 		{/if}
 	</div>
+
+	<!-- Keyboard Shortcuts Reference -->
+	<div class="shortcuts-reference">
+		<div class="shortcuts-grid">
+			<div class="shortcut-group">
+				<h4>Playback</h4>
+				<div class="shortcut"><kbd>Space</kbd><span>Play / Pause</span></div>
+				<div class="shortcut"><kbd>←</kbd><span>Seek back 5s</span></div>
+				<div class="shortcut"><kbd>→</kbd><span>Seek forward 5s</span></div>
+			</div>
+			<div class="shortcut-group">
+				<h4>Navigation</h4>
+				<div class="shortcut"><kbd>A</kbd><span>Previous line</span></div>
+				<div class="shortcut"><kbd>S</kbd><span>Next line</span></div>
+				<div class="shortcut"><kbd>R</kbd><span>Repeat line</span></div>
+			</div>
+			<div class="shortcut-group">
+				<h4>Speed</h4>
+				<div class="shortcut"><kbd>-</kbd><span>Slower</span></div>
+				<div class="shortcut"><kbd>+</kbd><span>Faster</span></div>
+			</div>
+			<div class="shortcut-group">
+				<h4>Modes</h4>
+				<div class="shortcut"><kbd>L</kbd><span>Loop line</span></div>
+				<div class="shortcut"><kbd>P</kbd><span>Auto-pause</span></div>
+				<div class="shortcut"><kbd>Y</kbd><span>Pinyin</span></div>
+			</div>
+		</div>
+	</div>
 </div>
 
 <style>
@@ -634,6 +608,8 @@
 		display: flex;
 		flex-direction: column;
 		background: var(--black-9);
+		max-width: 100%;
+		overflow-x: hidden;
 	}
 
 	/* Top Section: Video + Pool side by side */
@@ -664,7 +640,7 @@
 
 	.player-wrapper {
 		width: 100%;
-		max-width: 640px;
+		max-width: min(640px, 100%);
 		margin: 0 auto;
 		border-radius: 8px;
 		overflow: hidden;
@@ -672,9 +648,14 @@
 
 	.player-wrapper :global(.plyr) {
 		--plyr-color-main: var(--primary);
+		--plyr-focus-visible-color: transparent;
 		aspect-ratio: 16/9;
 		width: 100%;
 		border-radius: 8px;
+	}
+
+	.player-wrapper :global(.plyr button:focus-visible) {
+		outline: none;
 	}
 
 	.player-wrapper video {
@@ -727,34 +708,50 @@
 		color: var(--primary);
 	}
 
-	.speed-buttons {
+	.speed-control {
 		display: flex;
-		gap: 0;
-		background: var(--black-8);
-		border-radius: 4px;
-		padding: 2px;
+		align-items: center;
+		gap: 0.75rem;
 	}
 
-	.speed-btn {
-		padding: 0.25rem 0.5rem;
+	.speed-slider {
+		width: 100px;
+		height: 4px;
+		appearance: none;
+		background: var(--black-7);
+		border-radius: 2px;
+		cursor: pointer;
+	}
+
+	.speed-slider::-webkit-slider-thumb {
+		appearance: none;
+		width: 14px;
+		height: 14px;
+		background: var(--primary);
+		border-radius: 50%;
+		cursor: pointer;
+		transition: transform 0.15s;
+	}
+
+	.speed-slider::-webkit-slider-thumb:hover {
+		transform: scale(1.2);
+	}
+
+	.speed-slider::-moz-range-thumb {
+		width: 14px;
+		height: 14px;
+		background: var(--primary);
+		border: none;
+		border-radius: 50%;
+		cursor: pointer;
+	}
+
+	.speed-value {
 		font-size: 0.75rem;
 		font-family: var(--body-font-family);
-		border: none;
-		background: transparent;
-		border-radius: 3px;
-		cursor: pointer;
-		color: var(--black-4);
-		transition: all 0.15s;
-	}
-
-	.speed-btn:hover {
-		background: var(--black-7);
-		color: var(--white);
-	}
-
-	.speed-btn.active {
-		background: var(--primary);
-		color: var(--black-10);
+		color: var(--black-3);
+		min-width: 2.5rem;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.controls-right {
@@ -786,33 +783,11 @@
 		color: var(--primary);
 	}
 
-	.help-btn {
-		width: 24px;
-		height: 24px;
-		border-radius: 50%;
-		border: 1px solid var(--black-7);
-		background: transparent;
-		color: var(--black-4);
-		font-size: 0.75rem;
-		font-family: var(--body-font-family);
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: all 0.15s;
-	}
-
-	.help-btn:hover {
-		border-color: var(--primary);
-		color: var(--primary);
-	}
-
 	/* Transcript Section: 3 Lines Only */
 	.transcript-section {
 		display: flex;
 		justify-content: center;
-		padding: 2rem 2rem;
-		margin-top: 1rem;
+		padding: 1.5rem 2rem;
 		background: var(--black-9);
 	}
 
@@ -822,6 +797,7 @@
 		gap: 0.5rem;
 		max-width: 700px;
 		width: 100%;
+		min-width: 0;
 	}
 
 	.line {
@@ -836,6 +812,7 @@
 		cursor: pointer;
 		text-align: left;
 		width: 100%;
+		min-width: 0;
 		transition: all 0.2s ease;
 	}
 
@@ -928,6 +905,7 @@
 		flex-direction: column;
 		gap: 0.25rem;
 		min-width: 0;
+		overflow: hidden;
 	}
 
 	.pinyin {
@@ -940,6 +918,8 @@
 	.chinese {
 		line-height: 1.6;
 		letter-spacing: 0.08em;
+		word-break: break-word;
+		overflow-wrap: break-word;
 	}
 
 	.char {
@@ -982,6 +962,55 @@
 		text-align: center;
 		padding: 3rem;
 		font-family: var(--body-font-family);
+	}
+
+	/* Inline Shortcuts Reference */
+	.shortcuts-reference {
+		margin-top: 2rem;
+		padding: 2rem;
+		background: var(--black-10);
+		border-top: 1px solid var(--black-7);
+	}
+
+	.shortcuts-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 2rem;
+		max-width: 800px;
+		margin: 0 auto;
+	}
+
+	.shortcuts-reference .shortcut-group h4 {
+		margin: 0 0 0.75rem;
+		font-size: 0.625rem;
+		text-transform: uppercase;
+		color: var(--black-5);
+		letter-spacing: 0.1em;
+		font-weight: 600;
+	}
+
+	.shortcuts-reference .shortcut {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.25rem 0;
+		font-size: 0.75rem;
+	}
+
+	.shortcuts-reference .shortcut kbd {
+		background: var(--black-8);
+		border: 1px solid var(--black-7);
+		border-radius: 4px;
+		padding: 0.2rem 0.5rem;
+		font-family: var(--body-font-family);
+		font-size: 0.625rem;
+		color: var(--black-3);
+		min-width: 1.5rem;
+		text-align: center;
+	}
+
+	.shortcuts-reference .shortcut span {
+		color: var(--black-4);
 	}
 
 	/* Page Header */
@@ -1062,96 +1091,14 @@
 		}
 	}
 
-	/* Help Dialog */
-	.help-overlay {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.7);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 1000;
-		padding: 1rem;
-	}
-
-	.help-dialog {
-		background: var(--black-8);
-		border: 1px solid var(--black-6);
-		border-radius: 12px;
-		max-width: 360px;
-		width: 100%;
-	}
-
-	.help-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 1rem;
-		border-bottom: 1px solid var(--black-7);
-	}
-
-	.help-header h3 {
-		margin: 0;
-		font-size: 1rem;
-		color: var(--white);
-	}
-
-	.close-btn {
-		width: 28px;
-		height: 28px;
-		border: none;
-		background: transparent;
-		font-size: 1.25rem;
-		color: var(--black-4);
-		cursor: pointer;
-		border-radius: 4px;
-	}
-
-	.close-btn:hover {
-		background: var(--black-7);
-		color: var(--white);
-	}
-
-	.help-content {
-		padding: 1rem;
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1rem;
-	}
-
-	.shortcut-group h4 {
-		margin: 0 0 0.5rem;
-		font-size: 0.625rem;
-		text-transform: uppercase;
-		color: var(--black-4);
-		letter-spacing: 0.1em;
-	}
-
-	.shortcut {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 0.25rem 0;
-		font-size: 0.75rem;
-	}
-
-	.shortcut kbd {
-		background: var(--black-7);
-		border-radius: 3px;
-		padding: 0.125rem 0.375rem;
-		font-family: var(--body-font-family);
-		font-size: 0.625rem;
-		color: var(--black-2);
-	}
-
-	.shortcut span {
-		color: var(--black-3);
-	}
-
-	/* Responsive */
+	/* Responsive - using syntax.fm breakpoints */
 	@media (max-width: 900px) {
 		.top-section {
 			grid-template-columns: 1fr;
+		}
+
+		.top-section::before {
+			display: none;
 		}
 
 		.pool-area {
@@ -1165,22 +1112,94 @@
 		}
 	}
 
-	@media (max-width: 600px) {
+	@media (max-width: 700px) {
+		.page-header {
+			padding: 2rem 1rem 1.5rem;
+		}
+
+		.video-title {
+			font-size: 1.25rem;
+		}
+
 		.controls-bar {
-			padding: 0.5rem 1rem;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 0.75rem;
+			padding: 0.75rem 1rem;
+		}
+
+		.controls-left,
+		.controls-right {
+			justify-content: center;
+		}
+
+		.speed-slider {
+			width: 80px;
+		}
+
+		.toggle-btn {
+			padding: 0.375rem 0.5rem;
+			font-size: 0.7rem;
+		}
+
+		.video-area {
+			padding: 1rem 0.5rem 2rem;
 		}
 
 		.transcript-section {
-			padding: 1rem;
+			padding: 1rem 0.5rem;
 		}
 
-		.chinese {
+		.line {
+			padding: 0.5rem 0.75rem;
+			gap: 0.5rem;
+		}
+
+		.line.current .chinese,
+		.line.prev .chinese,
+		.line.next .chinese {
+			font-size: 1.5rem;
+		}
+
+		.shortcuts-grid {
+			grid-template-columns: repeat(2, 1fr);
+			gap: 1.5rem;
+		}
+
+		.shortcuts-reference {
+			padding: 1.5rem 1rem;
+		}
+	}
+
+	@media (max-width: 400px) {
+		.video-title {
+			font-size: 1.1rem;
+		}
+
+		.controls-right {
+			flex-wrap: wrap;
+			gap: 0.5rem;
+		}
+
+		.line.current .chinese,
+		.line.prev .chinese,
+		.line.next .chinese {
 			font-size: 1.25rem;
 			letter-spacing: 0.04em;
 		}
 
-		.line {
-			padding: 0.75rem 1rem;
+		.shortcuts-grid {
+			grid-template-columns: 1fr 1fr;
+			gap: 1rem;
+		}
+
+		.shortcuts-reference .shortcut {
+			font-size: 0.7rem;
+		}
+
+		.shortcuts-reference .shortcut kbd {
+			font-size: 0.6rem;
+			padding: 0.15rem 0.35rem;
 		}
 	}
 </style>
