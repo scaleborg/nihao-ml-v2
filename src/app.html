@@ -7,12 +7,16 @@
 
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 
-		<script
-			defer
-			data-domain="nihao.ml"
-			data-api="/api/57475/3v3n7"
-			src="/api/57475/script.js"
-		></script>
+		<script>
+			if (location.hostname !== 'localhost') {
+				const s = document.createElement('script');
+				s.defer = true;
+				s.dataset.domain = 'nihao.ml';
+				s.dataset.api = '/api/57475/3v3n7';
+				s.src = '/api/57475/script.js';
+				document.head.appendChild(s);
+			}
+		</script>
 
 		%sveltekit.head%
 	</head>

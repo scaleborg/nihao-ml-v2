@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { run } from 'svelte/legacy';
-
 	import { afterNavigate } from '$app/navigation';
 	import { overlay_open, search_query, search_recent, searching } from '$state/search';
 	import { onMount, tick } from 'svelte';
@@ -24,7 +22,7 @@
 	let ready = $state(false);
 	let active_color = $state('var(--fg)');
 
-	let uid = $state(1);
+	let uid = 1;
 	const pending = new Set();
 
 	onMount(async () => {
@@ -71,30 +69,33 @@
 		close();
 	}
 
-	run(() => {
-		if (ready) {
+	// Send search query to worker when ready or query changes
+	$effect(() => {
+		if (ready && $search_query !== undefined) {
 			const id = uid++;
 			pending.add(id);
 			worker.postMessage({ type: 'query', id, payload: $search_query });
 		}
 	});
 
-	run(() => {
+	// Send recent searches to worker
+	$effect(() => {
 		if (ready) {
 			worker.postMessage({ type: 'recents', payload: $state.snapshot($search_recent) });
 		}
 	});
 
-	run(() => {
-		tick().then(() => ($overlay_open = $searching));
+	// Sync overlay state with searching state
+	$effect(() => {
+		const isSearching = $searching;
+		tick().then(() => ($overlay_open = isSearching));
 	});
 
-	run(() => {
-		if ($searching) {
-			if (modal) {
-				$overlay_open = true;
-				modal.showModal();
-			}
+	// Show modal when searching starts
+	$effect(() => {
+		if ($searching && modal) {
+			$overlay_open = true;
+			modal.showModal();
 		}
 	});
 
