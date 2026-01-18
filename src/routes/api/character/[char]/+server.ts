@@ -17,7 +17,11 @@ export const GET: RequestHandler = async ({ params }) => {
 			definition: true,
 			hsk_level: true,
 			radical: true,
-			stroke_count: true
+			stroke_count: true,
+			etymology_type: true,
+			etymology_hint: true,
+			semantic: true,
+			phonetic: true
 		}
 	});
 

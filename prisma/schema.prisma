@@ -153,6 +153,12 @@ model Character {
   stroke_count Int?
   stroke_order String? @db.Text // Stroke order data for animation
 
+  // Etymology (字源) - explains why character looks/means what it does
+  etymology_type String? // pictographic (象形), ideographic (会意), pictophonetic (形声)
+  etymology_hint String? @db.Text // Explanation of character origin
+  semantic       String? // Meaning component for pictophonetic (形旁)
+  phonetic       String? // Sound component for pictophonetic (声旁)
+
   user_characters UserCharacter[]
 }
 

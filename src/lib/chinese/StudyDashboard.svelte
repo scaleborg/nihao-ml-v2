@@ -8,6 +8,10 @@
 		hsk_level: number | null;
 		radical: string | null;
 		stroke_count: number | null;
+		etymology_type: string | null;
+		etymology_hint: string | null;
+		semantic: string | null;
+		phonetic: string | null;
 	}
 
 	interface Props {
@@ -237,28 +241,56 @@
 												<span class="detail-char">{char}</span>
 												<span class="detail-pinyin">{data.pinyin}</span>
 											</div>
-											<div class="char-stats">
+											<div class="char-meta-line">
 												{#if data.radical}
-													<div class="stat-box">
-														<span class="stat-value radical">{data.radical}</span>
-														<span class="stat-label">radical</span>
-													</div>
+													<span class="meta-item"
+														><span class="meta-value radical">{data.radical}</span> radical</span
+													>
 												{/if}
 												{#if data.hsk_level}
-													<div class="stat-box">
-														<span class="stat-value">{data.hsk_level}</span>
-														<span class="stat-label">HSK</span>
-													</div>
+													<span class="meta-dot">·</span>
+													<span class="meta-item"
+														>HSK <span class="meta-value">{data.hsk_level}</span></span
+													>
 												{/if}
 												{#if data.stroke_count}
-													<div class="stat-box">
-														<span class="stat-value">{data.stroke_count}</span>
-														<span class="stat-label">strokes</span>
-													</div>
+													<span class="meta-dot">·</span>
+													<span class="meta-item"
+														><span class="meta-value">{data.stroke_count}</span> strokes</span
+													>
 												{/if}
 											</div>
 										</div>
 										<p class="detail-definition">{data.definition}</p>
+
+										{#if data.etymology_hint}
+											<div class="etymology-section">
+												<span class="etymology-type"
+													>{data.etymology_type === 'pictophonetic'
+														? '形声'
+														: data.etymology_type === 'ideographic'
+															? '会意'
+															: data.etymology_type === 'pictographic'
+																? '象形'
+																: ''}</span
+												>
+												<span class="etymology-hint">{data.etymology_hint}</span>
+												{#if data.semantic || data.phonetic}
+													<div class="etymology-parts">
+														{#if data.semantic}
+															<span class="part semantic"
+																><span class="part-char">{data.semantic}</span> meaning</span
+															>
+														{/if}
+														{#if data.phonetic}
+															<span class="part phonetic"
+																><span class="part-char">{data.phonetic}</span> sound</span
+															>
+														{/if}
+													</div>
+												{/if}
+											</div>
+										{/if}
 									</div>
 
 									<div class="details-actions">
@@ -631,40 +663,34 @@
 		font-family: var(--body-font-family);
 	}
 
-	.char-stats {
+	.char-meta-line {
 		display: flex;
-		gap: 0.5rem;
-	}
-
-	.stat-box {
-		display: flex;
-		flex-direction: column;
 		align-items: center;
-		padding: 0.375rem 0.625rem;
-		background: var(--black-7);
-		border-radius: 4px;
-		min-width: 44px;
+		gap: 0.5rem;
+		font-size: 0.8rem;
+		font-family: var(--body-font-family);
+		color: var(--black-4);
 	}
 
-	.stat-value {
-		font-size: 1.25rem;
+	.meta-item {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	.meta-value {
 		font-weight: 600;
 		color: var(--white);
-		line-height: 1;
 	}
 
-	.stat-value.radical {
-		font-size: 1.75rem;
+	.meta-value.radical {
+		font-size: 1.25rem;
 		color: var(--primary);
 		font-weight: normal;
 	}
 
-	.stat-label {
-		font-size: 0.5rem;
-		color: var(--black-5);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		margin-top: 0.25rem;
+	.meta-dot {
+		color: var(--black-6);
 	}
 
 	.detail-definition {
@@ -677,6 +703,59 @@
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	/* Etymology section */
+	.etymology-section {
+		margin-top: 0.75rem;
+		padding: 0.625rem 0.75rem;
+		background: var(--black-9);
+		border-radius: 6px;
+		border-left: 3px solid var(--primary);
+	}
+
+	.etymology-type {
+		font-size: 0.7rem;
+		font-weight: 600;
+		color: var(--primary);
+		margin-right: 0.5rem;
+	}
+
+	.etymology-hint {
+		font-size: 0.75rem;
+		color: var(--black-3);
+		font-style: italic;
+	}
+
+	.etymology-parts {
+		display: flex;
+		gap: 0.75rem;
+		margin-top: 0.5rem;
+	}
+
+	.etymology-parts .part {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		font-size: 0.7rem;
+		color: var(--black-4);
+	}
+
+	.etymology-parts .part-char {
+		font-size: 1rem;
+		font-weight: 500;
+		color: var(--white);
+		padding: 0.125rem 0.375rem;
+		background: var(--black-7);
+		border-radius: 4px;
+	}
+
+	.etymology-parts .semantic .part-char {
+		border: 1px solid #22c55e;
+	}
+
+	.etymology-parts .phonetic .part-char {
+		border: 1px solid #3b82f6;
 	}
 
 	.details-actions {

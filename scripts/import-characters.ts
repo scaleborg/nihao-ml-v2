@@ -31,6 +31,11 @@ interface CharacterData {
 	radical: string | null;
 	components: string | null;
 	stroke_count: number | null;
+	// Etymology
+	etymology_type: string | null;
+	etymology_hint: string | null;
+	semantic: string | null;
+	phonetic: string | null;
 }
 
 interface MakeHanziEntry {
@@ -41,6 +46,12 @@ interface MakeHanziEntry {
 	matches: number[][];
 	strokes: string[];
 	decomposition: string;
+	etymology?: {
+		type: string;
+		hint?: string;
+		semantic?: string;
+		phonetic?: string;
+	};
 }
 
 interface CEDICTEntry {
@@ -275,7 +286,12 @@ function mergeCharacterData(
 			frequency: null, // Could add frequency data later
 			radical: entry.radical || null,
 			components,
-			stroke_count: entry.strokes?.length || null
+			stroke_count: entry.strokes?.length || null,
+			// Etymology
+			etymology_type: entry.etymology?.type || null,
+			etymology_hint: entry.etymology?.hint || null,
+			semantic: entry.etymology?.semantic || null,
+			phonetic: entry.etymology?.phonetic || null
 		});
 	}
 
@@ -297,7 +313,12 @@ function mergeCharacterData(
 				frequency: null,
 				radical: null,
 				components: null,
-				stroke_count: null
+				stroke_count: null,
+				// No etymology for HSK-only characters
+				etymology_type: null,
+				etymology_hint: null,
+				semantic: null,
+				phonetic: null
 			});
 		}
 	}
@@ -353,7 +374,11 @@ async function importToDatabase(characters: Map<string, CharacterData>) {
 						frequency: char.frequency,
 						radical: char.radical,
 						components: char.components,
-						stroke_count: char.stroke_count
+						stroke_count: char.stroke_count,
+						etymology_type: char.etymology_type,
+						etymology_hint: char.etymology_hint,
+						semantic: char.semantic,
+						phonetic: char.phonetic
 					}
 				});
 				imported++;
