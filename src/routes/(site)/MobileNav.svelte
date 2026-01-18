@@ -20,6 +20,7 @@
 			<button class="button-reset close-button" onclick={toggle}>×</button>
 			<nav>
 				<a onclick={toggle} href="/videos">Videos</a>
+				<a onclick={toggle} href="/notebook">Notebook</a>
 				<a onclick={toggle} href="/about">About</a>
 				<a onclick={toggle} target="_blank" href="https://sentry.shop">Swag</a>
 			</nav>

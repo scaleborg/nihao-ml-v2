@@ -22,6 +22,9 @@
 
 		<nav class="desktop_nav content">
 			<a class={$page.url.pathname.startsWith('/videos') ? 'active' : ''} href="/videos">Videos</a>
+			<a class={$page.url.pathname.startsWith('/notebook') ? 'active' : ''} href="/notebook"
+				>Notebook</a
+			>
 			<a class={$page.url.pathname.startsWith('/about') ? 'active' : ''} href="/about">About</a>
 			<a target="_blank" href="https://sentry.shop">Swag</a>
 			<Search />

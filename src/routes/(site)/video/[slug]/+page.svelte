@@ -276,17 +276,17 @@
 		if (!pool_characters.has(char)) {
 			if (character_cache.has(char)) {
 				pool_characters.set(char, character_cache.get(char) ?? null);
-				pool_characters = pool_characters;
+				pool_characters = new Map(pool_characters);
 			} else {
 				pool_characters.set(char, null);
-				pool_characters = pool_characters;
+				pool_characters = new Map(pool_characters);
 				try {
 					const res = await fetch(`/api/character/${encodeURIComponent(char)}`);
 					if (res.ok) {
 						const data = await res.json();
 						character_cache.set(char, data);
 						pool_characters.set(char, data);
-						pool_characters = pool_characters;
+						pool_characters = new Map(pool_characters);
 					} else {
 						character_cache.set(char, null);
 					}
@@ -320,7 +320,7 @@
 
 	function handleGraduate(char: string) {
 		pool_characters.delete(char);
-		pool_characters = pool_characters;
+		pool_characters = new Map(pool_characters);
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -520,7 +520,13 @@
 					<button
 						class="line current"
 						style="--progress: {line_progress}%"
-						onclick={() => seekToLine(current_line_index)}
+						onclick={(e) => {
+							// Only seek if clicking on the line background, not on a character
+							const target = e.target as HTMLElement;
+							if (!target.classList.contains('char') || !target.hasAttribute('role')) {
+								seekToLine(current_line_index);
+							}
+						}}
 					>
 						<span class="time">{formatTime(line.start_time)}</span>
 						<div class="text-content">
@@ -532,7 +538,7 @@
 									{#if isClickable}
 										{@const status = get_character_status(char)}
 										<span
-											class="char"
+											class="char clickable"
 											class:char-new={status === 'new'}
 											class:char-learning={status === 'learning'}
 											role="button"
@@ -927,6 +933,10 @@
 		padding: 2px 6px;
 		margin: -2px;
 		border-radius: 3px;
+	}
+
+	.char.clickable {
+		cursor: pointer;
 	}
 
 	.char.char-new {
