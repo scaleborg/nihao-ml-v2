@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, tick, onDestroy } from 'svelte';
 	import type { PageData } from './$types';
-	import WordPool from '$lib/chinese/WordPool.svelte';
+	import StudyDashboard from '$lib/chinese/StudyDashboard.svelte';
 	import 'plyr/dist/plyr.css';
 
 	// Plyr instance (dynamically imported to avoid SSR issues)
@@ -443,8 +443,8 @@
 				{/if}
 			</div>
 		</div>
-		<div class="pool-area">
-			<WordPool
+		<div class="study-area">
+			<StudyDashboard
 				characters={pool_characters}
 				{user_characters}
 				expanded_char={expanded_pool_char}
@@ -618,36 +618,26 @@
 		overflow-x: hidden;
 	}
 
-	/* Top Section: Video + Pool side by side */
+	/* Top Section: Video + Study Dashboard side by side */
 	.top-section {
 		display: grid;
-		grid-template-columns: 1fr 280px;
+		grid-template-columns: 1fr 420px;
 		gap: 0;
 		background: var(--black-10);
 		border-bottom: 1px solid var(--black-7);
-		position: relative;
-	}
-
-	.top-section::before {
-		content: '';
-		position: absolute;
-		right: 280px;
-		top: 0;
-		bottom: 0;
-		width: 1px;
-		background: var(--black-7);
+		min-height: 500px;
 	}
 
 	.video-area {
-		padding: 2rem 2rem 3.5rem;
-		display: grid;
-		place-items: center;
+		padding: 2rem;
+		display: flex;
+		align-items: flex-start;
+		justify-content: flex-start;
 	}
 
 	.player-wrapper {
 		width: 100%;
-		max-width: min(640px, 100%);
-		margin: 0 auto;
+		max-width: 720px;
 		border-radius: 8px;
 		overflow: hidden;
 	}
@@ -678,11 +668,10 @@
 		display: none !important;
 	}
 
-	.pool-area {
-		overflow-y: auto;
-		padding: 2rem 1rem;
-		align-self: start;
-		max-height: 400px;
+	.study-area {
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
 	}
 
 	/* Controls Bar */
@@ -1102,19 +1091,25 @@
 	}
 
 	/* Responsive - using syntax.fm breakpoints */
+	@media (max-width: 1100px) {
+		.top-section {
+			grid-template-columns: 1fr 360px;
+		}
+	}
+
 	@media (max-width: 900px) {
 		.top-section {
 			grid-template-columns: 1fr;
+			min-height: auto;
 		}
 
-		.top-section::before {
-			display: none;
+		.video-area {
+			justify-content: center;
 		}
 
-		.pool-area {
-			border-left: none;
+		.study-area {
 			border-top: 1px solid var(--black-7);
-			max-height: 200px;
+			max-height: 400px;
 		}
 
 		.chinese {
