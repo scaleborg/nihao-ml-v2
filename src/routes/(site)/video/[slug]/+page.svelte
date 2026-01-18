@@ -332,11 +332,11 @@
 				event.preventDefault();
 				togglePlayPause();
 				break;
-			case 'a':
+			case 'arrowup':
 				event.preventDefault();
 				goToPreviousLine();
 				break;
-			case 's':
+			case 'arrowdown':
 				event.preventDefault();
 				goToNextLine();
 				break;
@@ -584,9 +584,9 @@
 			</div>
 			<div class="shortcut-group">
 				<h4>Navigation</h4>
-				<div class="shortcut"><kbd>A</kbd><span>Previous line</span></div>
-				<div class="shortcut"><kbd>S</kbd><span>Next line</span></div>
-				<div class="shortcut"><kbd>R</kbd><span>Repeat line</span></div>
+				<div class="shortcut"><kbd>↑</kbd><span>Previous caption</span></div>
+				<div class="shortcut"><kbd>↓</kbd><span>Next caption</span></div>
+				<div class="shortcut"><kbd>R</kbd><span>Repeat caption</span></div>
 			</div>
 			<div class="shortcut-group">
 				<h4>Speed</h4>
@@ -595,7 +595,7 @@
 			</div>
 			<div class="shortcut-group">
 				<h4>Modes</h4>
-				<div class="shortcut"><kbd>L</kbd><span>Loop line</span></div>
+				<div class="shortcut"><kbd>L</kbd><span>Loop caption</span></div>
 				<div class="shortcut"><kbd>P</kbd><span>Auto-pause</span></div>
 				<div class="shortcut"><kbd>Y</kbd><span>Pinyin</span></div>
 			</div>
