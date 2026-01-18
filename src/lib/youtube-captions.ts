@@ -1,6 +1,9 @@
 /**
  * Client-side YouTube caption extraction
  * Uses CORS proxy to fetch captions from YouTube
+ *
+ * POLICY: Only import videos with MANUAL Chinese (Simplified) subtitles
+ * Auto-generated captions (kind === 'asr') are NOT accepted
  */
 
 export type Subtitle = {
@@ -17,7 +20,7 @@ type CaptionTrack = {
 };
 
 const CORS_PROXY = (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`;
-const CHINESE_LANGS = ['zh-Hans', 'zh-CN', 'zh-Hant', 'zh-TW', 'zh'];
+const SIMPLIFIED_CHINESE_LANGS = ['zh-Hans', 'zh-CN'];
 
 function parseSubtitleXml(xml: string): Subtitle[] {
 	const subtitles: Subtitle[] = [];
@@ -44,18 +47,21 @@ function parseSubtitleXml(xml: string): Subtitle[] {
 	return subtitles;
 }
 
-function selectChineseTrack(tracks: CaptionTrack[]): CaptionTrack | null {
-	for (const lang of CHINESE_LANGS) {
-		const match = tracks.find((track) => track.languageCode === lang);
+function selectSimplifiedChineseTrack(tracks: CaptionTrack[]): CaptionTrack | null {
+	// POLICY: Filter out auto-generated captions (kind === 'asr')
+	const manualTracks = tracks.filter((track) => track.kind !== 'asr');
+
+	// Only match Simplified Chinese tracks (zh-Hans, zh-CN)
+	for (const lang of SIMPLIFIED_CHINESE_LANGS) {
+		const match = manualTracks.find((track) => track.languageCode === lang);
 		if (match) return match;
 	}
 
+	// Fallback: check for tracks explicitly named Simplified Chinese
 	return (
-		tracks.find(
+		manualTracks.find(
 			(track) =>
-				track.languageCode?.startsWith('zh') ||
-				track.name?.simpleText?.includes('Chinese') ||
-				track.name?.simpleText?.includes('中文')
+				track.name?.simpleText?.includes('简体') || track.name?.simpleText?.includes('Simplified')
 		) || null
 	);
 }
@@ -106,16 +112,16 @@ async function fetchSubtitlesFromTrack(baseUrl: string): Promise<Subtitle[]> {
 }
 
 /**
- * Fetch Chinese subtitles from a YouTube video (client-side)
+ * Fetch Simplified Chinese subtitles from a YouTube video (client-side)
  */
 export async function fetchChineseSubtitles(videoId: string): Promise<Subtitle[] | null> {
 	const tracks = await fetchCaptionTracksFromPage(videoId);
 	if (tracks.length === 0) return null;
 
-	const chineseTrack = selectChineseTrack(tracks);
-	if (!chineseTrack) return null;
+	const simplifiedTrack = selectSimplifiedChineseTrack(tracks);
+	if (!simplifiedTrack) return null;
 
-	const subtitles = await fetchSubtitlesFromTrack(chineseTrack.baseUrl);
+	const subtitles = await fetchSubtitlesFromTrack(simplifiedTrack.baseUrl);
 	return subtitles.length > 0 ? subtitles : null;
 }
 
