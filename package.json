@@ -22,6 +22,7 @@
 		"db:push": "prisma db push",
 		"db:seed": "prisma db seed",
 		"i-changed-the-schema": "pnpm run db:push && pnpm run db:generate",
+		"db:import-characters": "npx tsx scripts/import-characters.ts",
 		"postinstall": "pnpm db:generate && pnpm exec playwright install",
 		"stylelint": "NODE_OPTIONS=--no-deprecation stylelint \"**/*.css\""
 	},
