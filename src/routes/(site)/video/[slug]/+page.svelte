@@ -579,8 +579,8 @@
 			<div class="shortcut-group">
 				<h4>Playback</h4>
 				<div class="shortcut"><kbd>Space</kbd><span>Play / Pause</span></div>
-				<div class="shortcut"><kbd>←</kbd><span>Seek back 5s</span></div>
-				<div class="shortcut"><kbd>→</kbd><span>Seek forward 5s</span></div>
+				<div class="shortcut"><kbd>←</kbd><span>Skip back 5s</span></div>
+				<div class="shortcut"><kbd>→</kbd><span>Skip forward 5s</span></div>
 			</div>
 			<div class="shortcut-group">
 				<h4>Navigation</h4>
