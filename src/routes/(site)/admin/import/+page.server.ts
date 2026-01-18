@@ -3,14 +3,28 @@ import { prisma_client } from '$/server/prisma-client';
 import { extractVideoId, fetchVideoMetadata } from '$/server/video/youtube_api';
 import { fetchChineseCaptions, type Caption } from '$/server/video/captions';
 import { generatePinyin } from '$/server/video/pinyin';
+import { downloadYouTubeVideo, isYtDlpAvailable } from '$/server/video/download';
+import { uploadVideoToR2, isR2Configured } from '$/server/storage/r2';
 import slug from 'speakingurl';
-import type { Actions } from './$types';
+import type { Actions, PageServerLoad } from './$types';
+
+export const load: PageServerLoad = async () => {
+	// Check if native video support is available
+	const yt_dlp_available = await isYtDlpAvailable();
+	const r2_configured = isR2Configured();
+	const native_video_available = yt_dlp_available && r2_configured;
+
+	return {
+		native_video_available
+	};
+};
 
 export const actions = {
 	default: async ({ request }) => {
 		const form_data = await request.formData();
 		const url = form_data.get('url') as string;
 		const is_public = form_data.get('is_public') === 'on';
+		const native_video = form_data.get('native_video') === 'on';
 		const client_subtitles_raw = form_data.get('client_subtitles') as string | null;
 
 		// Validate URL
@@ -44,6 +58,7 @@ export const actions = {
 
 		// Try client-provided subtitles first, then server fallback
 		let captions: Caption[] = [];
+		let availableLanguages: string[] = [];
 
 		if (client_subtitles_raw) {
 			try {
@@ -63,22 +78,54 @@ export const actions = {
 		// Server-side fallback if client didn't provide subtitles
 		if (captions.length === 0) {
 			try {
-				captions = await fetchChineseCaptions(video_id);
+				const result = await fetchChineseCaptions(video_id);
+				captions = result.captions;
+				availableLanguages = result.availableLanguages;
 			} catch (e) {
 				console.error('Server caption fetch error:', e);
 			}
 		}
 
 		if (captions.length === 0) {
-			return fail(400, {
-				error:
-					'No Chinese captions found for this video. Please choose a video with Chinese subtitles.',
-				url
-			});
+			let errorMsg = 'No Simplified Chinese captions found for this video.';
+
+			if (availableLanguages.length > 0) {
+				errorMsg += ` Available languages: ${availableLanguages.join(', ')}.`;
+			} else {
+				errorMsg += ' This video has no subtitles available.';
+			}
+
+			errorMsg += ' Please choose a video with Simplified Chinese (简体中文) subtitles.';
+
+			return fail(400, { error: errorMsg, url });
 		}
 
 		// Generate slug from title
 		const video_slug = slug(metadata.title);
+
+		// Handle native video download and upload if requested
+		let video_url: string | null = null;
+		let video_key: string | null = null;
+		let duration: number | null = null;
+
+		if (native_video && isR2Configured()) {
+			try {
+				// Download video from YouTube
+				const download_result = await downloadYouTubeVideo(video_id);
+				duration = download_result.duration;
+
+				// Upload to R2
+				const upload_result = await uploadVideoToR2(video_id, download_result.buffer);
+				video_url = upload_result.url;
+				video_key = upload_result.key;
+			} catch (e) {
+				console.error('Native video processing error:', e);
+				return fail(500, {
+					error: `Failed to process native video: ${e instanceof Error ? e.message : 'Unknown error'}`,
+					url
+				});
+			}
+		}
 
 		// Create video with transcript and lines
 		try {
@@ -90,6 +137,9 @@ export const actions = {
 					title: metadata.title,
 					channel_name: metadata.author_name,
 					thumbnail: metadata.thumbnail_url,
+					duration,
+					video_url,
+					video_key,
 					is_public,
 					transcript: {
 						create: {

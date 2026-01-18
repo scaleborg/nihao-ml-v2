@@ -1,13 +1,14 @@
 <script lang="ts">
-	import type { ActionData } from './$types';
+	import type { ActionData, PageData } from './$types';
 	import { enhance } from '$app/forms';
 	import { fetchChineseSubtitles, extractVideoId, type Subtitle } from '$lib/youtube-captions';
 
 	interface Props {
+		data: PageData;
 		form: ActionData;
 	}
 
-	let { form }: Props = $props();
+	let { data, form }: Props = $props();
 	let loading = $state(false);
 	let status = $state('');
 	let client_subtitles = $state<Subtitle[] | null>(null);
@@ -22,8 +23,8 @@
 		<a href="/admin" class="back-link">← Back to Admin</a>
 		<h1>Import Video</h1>
 		<p class="description">
-			Paste a YouTube URL to import a video with Chinese captions. The system will automatically
-			fetch the Chinese subtitles and generate pinyin for each line.
+			Paste a YouTube URL to import a video with Simplified Chinese (简体中文) captions. The system
+			will automatically fetch the subtitles and generate pinyin for each line.
 		</p>
 	</header>
 
@@ -102,6 +103,19 @@
 			</span>
 		</div>
 
+		{#if data.native_video_available}
+			<div class="field checkbox">
+				<label>
+					<input type="checkbox" name="native_video" disabled={loading} />
+					<span>Download as native video</span>
+				</label>
+				<span class="hint">
+					Downloads the video file to our servers. Provides faster playback and avoids YouTube ads,
+					but takes longer to import.
+				</span>
+			</div>
+		{/if}
+
 		<button type="submit" disabled={loading}>
 			{#if loading}
 				<span class="spinner"></span>
@@ -113,12 +127,12 @@
 	</form>
 
 	<section class="tips">
-		<h2>Tips for finding videos with Chinese captions</h2>
+		<h2>Tips for finding videos with Simplified Chinese captions</h2>
 		<ul>
-			<li>Look for videos from Chinese language learning channels</li>
-			<li>Chinese vlogs often have community-contributed subtitles</li>
-			<li>Music videos with lyrics may have Chinese captions</li>
+			<li>Look for videos from Mainland China creators</li>
+			<li>Chinese language learning channels often use Simplified Chinese</li>
 			<li>Filter YouTube search by "Subtitles/CC" to find captioned content</li>
+			<li>Note: Traditional Chinese (繁體) subtitles are not supported</li>
 		</ul>
 	</section>
 </div>

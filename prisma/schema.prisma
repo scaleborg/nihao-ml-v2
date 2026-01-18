@@ -78,6 +78,10 @@ model Video {
   thumbnail    String?
   duration     Int?     // seconds
 
+  // Native video (R2 storage)
+  video_url    String?  // R2 public URL (null = YouTube embed fallback)
+  video_key    String?  // R2 object key for deletion
+
   // Curation
   is_public    Boolean  @default(false)
   added_by     String?  // User ID who imported (null = admin-curated)
